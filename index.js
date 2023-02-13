@@ -5,9 +5,15 @@ let cursorY = 0;
 let selX = -1; //The coordinates of the square on the board that the mouse is hovering over
 let selY = -1; //(both will be -1 when it's off the board)
 let hand = -1; //The number of the tile being held by the player (-1 if they aren't holding one)
-let deck = [1, 2, 3]; //The number of each tile in the three slots at the bottom
+let deck = [0, 1, 2]; //The number of each tile in the three slots at the bottom
 let score = 0;
 let rAnim = 0;
+let gameState = "menu";
+let gameStarted = false;
+
+let allowRot = 0;
+let weirdRot = 0;
+let asymSides = 0;
 
 let col = ["#FFFFFF", "#BFBFBF", "#000000", "#FF0000", "#00BF00", "#0000FF"]; //The hex values of the game's colors. The first is the color of a tile, the rest are for the sides
 //col.push("#FFDF00");
@@ -20,103 +26,155 @@ let board = [
     [,,,,,,,],
     [,,,,,,,],
     [,,,,,,,],
-    [,,,,,,,],
+    [,,,,,,,]
 ]; //The board, a 2D array, where each spot is the number of the tile that sits there, or -1 for no tile
-for (let n = 0; n < 8; n++) { //Makes it so each spot on the board array is -1 / empty
-    for (let m = 0; m < 8; m++) {
-        board[m][n] = -1;
-    }
-}
 
 let tiles = []; //The array which stores each tile that is created
 
 function Tile () { //Constructor for tiles. The parameters are what color each side will be, and then the 12 positions are randomized
-    this.pos = [0,0,0,0,0,0,0,0,0,0,0,0]; //A position being "0" means it's blank
+    this.pos = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]; //A position being "0" means it's blank
     this.stacked = -1; //The tile stacked on top of this one. -1 means no tile
     let north = Math.ceil(Math.random() * colN) + 1;
     let east = Math.ceil(Math.random() * colN) + 1;
     let south = Math.ceil(Math.random() * colN) + 1;
     let west = Math.ceil(Math.random() * colN) + 1;
-    while (this.pos[0] + this.pos[1] + this.pos[2] == 0) {
-        this.pos[0] = Math.round(Math.random()) * north;
-        this.pos[1] = Math.round(Math.random()) * north;
-        this.pos[2] = Math.round(Math.random()) * north;
-    }
-    while (this.pos[3] + this.pos[4] + this.pos[5] == 0) {
-        this.pos[3] = Math.round(Math.random()) * east;
-        this.pos[4] = Math.round(Math.random()) * east;
-        this.pos[5] = Math.round(Math.random()) * east;
-        if (this.pos[0] != 0 && this.pos[0] != this.pos[3]) {
-            this.pos[3] = 0;
+    if (asymSides == 0) {
+        while (this.pos[0] + this.pos[1] + this.pos[2] == 0) {
+            this.pos[0] = Math.round(Math.random()) * north;
+            this.pos[1] = Math.round(Math.random()) * north;
+            this.pos[2] = Math.round(Math.random()) * north;
+            this.pos[3] = this.pos[1];
+            this.pos[4] = this.pos[0];
+        }
+        while (this.pos[5] + this.pos[6] + this.pos[7] == 0) {
+            this.pos[5] = Math.round(Math.random()) * east;
+            this.pos[6] = Math.round(Math.random()) * east;
+            this.pos[7] = Math.round(Math.random()) * east;
+            if (this.pos[4] != 0 && this.pos[4] != this.pos[5]) {
+                this.pos[5] = 0;
+            }
+            this.pos[8] = this.pos[6];
+            this.pos[9] = this.pos[5];
+        }
+        while (this.pos[10] + this.pos[11] + this.pos[12] == 0) {
+            this.pos[10] = Math.round(Math.random()) * south;
+            this.pos[11] = Math.round(Math.random()) * south;
+            this.pos[12] = Math.round(Math.random()) * south;
+            if (this.pos[9] != 0 && this.pos[9] != this.pos[10]) {
+                this.pos[10] = 0;
+            }
+            this.pos[13] = this.pos[11];
+            this.pos[14] = this.pos[10];
+        }
+        while (this.pos[15] + this.pos[16] + this.pos[17] == 0) {
+            this.pos[15] = Math.round(Math.random()) * west;
+            this.pos[16] = Math.round(Math.random()) * west;
+            this.pos[17] = Math.round(Math.random()) * west;
+            if (this.pos[14] + this.pos[0] != 0 && (this.pos[14] != this.pos[15] || this.pos[0] != this.pos[15])) {
+                this.pos[15] = 0;
+            }
+            this.pos[18] = this.pos[16];
+            this.pos[19] = this.pos[15];
         }
     }
-    while (this.pos[6] + this.pos[7] + this.pos[8] == 0) {
-        this.pos[6] = Math.round(Math.random()) * south;
-        this.pos[7] = Math.round(Math.random()) * south;
-        this.pos[8] = Math.round(Math.random()) * south;
-        if (this.pos[3] != 0 && this.pos[3] != this.pos[6]) {
-            this.pos[6] = 0;
+    else {
+        while (this.pos[0] + this.pos[1] + this.pos[2] + this.pos[3] + this.pos[4] == 0) {
+            this.pos[0] = Math.round(Math.random()) * north;
+            this.pos[1] = Math.round(Math.random()) * north;
+            this.pos[2] = Math.round(Math.random()) * north;
+            this.pos[3] = Math.round(Math.random()) * north;
+            this.pos[4] = Math.round(Math.random()) * north;
         }
-    }
-    while (this.pos[9] + this.pos[10] + this.pos[11] == 0) {
-        this.pos[9] = Math.round(Math.random()) * west;
-        this.pos[10] = Math.round(Math.random()) * west;
-        this.pos[11] = Math.round(Math.random()) * west;
-        if (this.pos[6] + this.pos[0] != 0 && (this.pos[6] != this.pos[9] || this.pos[0] != this.pos[9])) {
-            this.pos[9] = 0;
+        while (this.pos[5] + this.pos[6] + this.pos[7] + this.pos[8] + this.pos[9] == 0) {
+            this.pos[5] = Math.round(Math.random()) * east;
+            this.pos[6] = Math.round(Math.random()) * east;
+            this.pos[7] = Math.round(Math.random()) * east;
+            this.pos[8] = Math.round(Math.random()) * east;
+            this.pos[9] = Math.round(Math.random()) * east;
+            if (this.pos[4] != 0 && this.pos[4] != this.pos[5]) {
+                this.pos[5] = 0;
+            }
+        }
+        while (this.pos[10] + this.pos[11] + this.pos[12] + this.pos[13] + this.pos[14] == 0) {
+            this.pos[10] = Math.round(Math.random()) * south;
+            this.pos[11] = Math.round(Math.random()) * south;
+            this.pos[12] = Math.round(Math.random()) * south;
+            this.pos[13] = Math.round(Math.random()) * south;
+            this.pos[14] = Math.round(Math.random()) * south;
+            if (this.pos[9] != 0 && this.pos[9] != this.pos[10]) {
+                this.pos[10] = 0;
+            }
+        }
+        while (this.pos[15] + this.pos[16] + this.pos[17] + this.pos[18] + this.pos[19] == 0) {
+            this.pos[15] = Math.round(Math.random()) * west;
+            this.pos[16] = Math.round(Math.random()) * west;
+            this.pos[17] = Math.round(Math.random()) * west;
+            this.pos[18] = Math.round(Math.random()) * west;
+            this.pos[19] = Math.round(Math.random()) * west;
+            if (this.pos[14] != 0 && this.pos[14] != this.pos[15]) {
+                this.pos[15] = 0;
+            }
+            if (this.pos[0] != 0 && this.pos[0] != this.pos[19]) {
+                this.pos[19] = 0;
+            }
         }
     }
     this.rPos = this.pos; //"real position" or "read position", what to read for stacked tiles
 }
 
-tiles[0] = new Tile(); //Creates the opening set of tiles in the deck, as well as the one on the board
-tiles.push(new Tile());
-tiles.push(new Tile());
-tiles.push(new Tile());
-board[4][3] = 0; //Places the first tile
+function ruleInit() {
+    allowRot = 1;
+    weirdRot = 0;
+    asymSides = 0;
+    
+}
+
+function newGame() {
+    tiles = [];
+    deck = [0, 1, 2];
+    hand = -1;
+    tiles[0] = new Tile(); //Creates the opening set of tiles in the deck
+    tiles.push(new Tile());
+    tiles.push(new Tile());
+    for (let n = 0; n < 8; n++) { //Makes it so each spot on the board array is -1 / empty
+        for (let m = 0; m < 8; m++) {
+            board[m][n] = -1;
+        }
+    }
+}
 
 function calcRPos(t1, t2) { //t1 is stacked onto, t2 is on top
     let result = [];
-    result.length = 12;
+    result.length = 20;
     if (Math.sign(t1) == -1 || Math.sign(t2) == -1) {
         return Math.sign(t1) == -1 ? tiles[t2].pos : tiles[t1].pos;
     }
-    for (f = 0; f < 12; f++) {
+    for (f = 0; f < 20; f++) {
         result[f] = tiles[t2].pos[f] || tiles[t1].pos[f];
     }
     return result; //returns what the positions would be if t2 were stacked on top of t1
 }
 
+function match(p) {
+    return (p + 14 - (2 * (p % 5))) % 20;
+}
+
 function checkSide(t1, t2, s) { //t1 and t2 are the numbers of the two tiles being checked against each other
-    s *= 3; //s is passed in as either 0, 1, 2, or 3, depending on the side of t1 being checked against (0 is the top, goes around clockwise)
+    s *= 5; //s is passed in as either 0, 1, 2, or 3, depending on the side of t1 being checked against (0 is the top, goes around clockwise)
     let scoreToAdd = 0; //If the two tiles are deemed compatible, scr will be returned as the point value of their union
     if (t1 == -1 || t2 == -1) {
         return 0; //If either t1 or t2 is actually -1, meaning it's no tile at all, simply return 0
     }
     tiles[t1].rPos = calcRPos(t1, tiles[t1].stacked);
     tiles[t2].rPos = calcRPos(t2, tiles[t2].stacked);
-    if (tiles[t1].rPos[s] * tiles[t2].rPos[(s + 6) % 12] != 0) {
-        if (tiles[t1].rPos[s] != tiles[t2].rPos[(s + 6) % 12]) {
-            return -1; //If they are not compatible, -1 will be returned instead.
-        }
-        else {
-            scoreToAdd += 2;
-        }
-    }
-    if (tiles[t1].rPos[s + 1] * tiles[t2].rPos[(s + 7) % 12] != 0) {
-        if (tiles[t1].rPos[s + 1] != tiles[t2].rPos[(s + 7) % 12]) {
-            return -1;
-        }
-        else {
-            scoreToAdd += 2;
-        }
-    }
-    if (tiles[t1].rPos[s + 2] * tiles[t2].rPos[(s + 8) % 12] != 0) {
-        if (tiles[t1].rPos[s + 2] != tiles[t2].rPos[(s + 8) % 12]) {
-            return -1;
-        }
-        else {
-            scoreToAdd += 1;
+    for (let S = s; S < s + 5; S++) {
+        if (tiles[t1].rPos[S] * tiles[t2].rPos[match(S)] != 0) {
+            if (tiles[t1].rPos[S] != tiles[t2].rPos[match(S)]) {
+                return -1; //If they are not compatible, -1 will be returned instead.
+            }
+            else {
+                scoreToAdd += 1;
+            }
         }
     }
     return scoreToAdd;
@@ -152,22 +210,12 @@ function checkStackCompat (t1, t2) { //checks whether or not t2 can be stacked o
     }
 
     let rT = calcRPos(t1, t2);
-    for (let f = 0; f < 12; f++) {
-        if (f % 3 == 0) {
-            if (rT[f] * rT[(f + 9) % 12] != 0 && rT[f] != rT[(f + 9) % 12]) {
-                return false;
-            }
-            if (rT[f] * rT[(f + 3) % 12] != 0 && rT[f] != rT[(f + 3) % 12]) {
-                return false;
-            }
+    for (let f = 0; f < 20; f++) {
+        if (rT[f] * rT[(f + 19) % 20] != 0 && rT[f] != rT[(f + 19) % 20]) {
+            return false;
         }
-        else if ((f - 1) % 3 == 0) {
-            if (rT[f] * rT[f - 1] != 0 && rT[f] != rT[f - 1]) {
-                return false;
-            }
-            if (rT[f] * rT[f + 1] != 0 && rT[f] != rT[f + 1]) {
-                return false;
-            }
+        if (rT[f] * rT[(f + 1) % 20] != 0 && rT[f] != rT[(f + 1) % 20]) {
+            return false;
         }
     }
     return true;
@@ -187,23 +235,32 @@ function calcScore() { //racks up the score of the entire board
     }
 }
 
-function displayPos(c, t, x, y, s, r) { //parameters are Canvas, Tile (an array of its 12 positions), X and Y coordinates, Size, and Rotation
+function pointInArea(pX, pY, aX, aY, aW, aH) {
+    if (pX >= aX && pX <= (aX + aW) && pY >= aY && pY <= (aY + aH)) {
+        return true;
+    }
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+function displayPos(c, t, x, y, s, r) { //parameters are Canvas, Tile (an array of its 20 positions), X and Y coordinates, Size, and Rotation
     c.resetTransform();
     c.translate(x, y);
     c.scale(s / 10, s / 10);
     c.rotate(r);
-    for (let p = 0; p < 12; p++) {
+    for (let p = 0; p < 20; p++) {
         if (t[p] == 0) {
-            if (p % 3 == 2) {
+            if (p % 5 == 4) {
                 c.rotate(Math.PI / 2);
             }
             continue;
         }
         c.fillStyle = col[t[p]];
         c.strokeStyle = col[t[p]];
-        switch (p % 3) {
+        switch (p % 5) {
             case 0:
-                if (t[(p + 9) % 12] == t[p]) {
+                if (t[(p + 19) % 20] == t[p]) {
                     c.fillRect(-5, -5, 2, 2);
                 }
                 else {
@@ -213,20 +270,24 @@ function displayPos(c, t, x, y, s, r) { //parameters are Canvas, Tile (an array 
                     c.lineTo(-3, -3);
                     c.fill();
                 }
-                if (t[(p + 3) % 12] != t[p]) {
+                break;
+            case 1:
+                c.fillRect(-3, -5, 2, 2);
+                break;
+            case 2:
+                c.fillRect(-1, -5, 2, 2);
+                break;
+            case 3:
+                c.fillRect(1, -5, 2, 2);
+                break;
+            case 4:
+                if (t[(p + 1) % 20] != t[p]) {
                     c.beginPath();
                     c.moveTo(3, -5);
                     c.lineTo(5, -5);
                     c.lineTo(3, -3);
                     c.fill();
                 }
-                break;
-            case 1:
-                c.fillRect(-3, -5, 2, 2);
-                c.fillRect(1, -5, 2, 2);
-                break;
-            case 2:
-                c.fillRect(-1, -5, 2, 2);
                 c.rotate(Math.PI / 2);
                 break;
             default:
@@ -261,57 +322,90 @@ function displayArrow(c, x, y, l, r) { //Draws an arrow on context c with a cent
     c.resetTransform();
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
 document.addEventListener('keydown', (event) => { //Key presses, for rotating and stacking tiles
     const keyName = event.key.toLowerCase();
-    if (keyName === 'a') {
-        if (hand != -1) {
-            tiles[hand].pos.push(tiles[hand].pos.shift());
-            tiles[hand].pos.push(tiles[hand].pos.shift());
-            tiles[hand].pos.push(tiles[hand].pos.shift());
-            tiles[hand].pos.length = 12;
-            rAnim += Math.PI / 2;
-            if (tiles[hand].stacked != -1) {
-                tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
-                tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
-                tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
-                tiles[tiles[hand].stacked].pos.length = 12;
+    if (gameState == "game") {
+        if (keyName === 'a' && hand != -1) {
+            if (weirdRot == 1){
+                tiles[hand].pos.push(tiles[hand].pos.shift());
+                tiles[hand].pos.length = 20;
             }
-        }
-    }
-    if (keyName === 'd') {
-        if (hand != -1) {
-            tiles[hand].pos.unshift(tiles[hand].pos[11]);
-            tiles[hand].pos.unshift(tiles[hand].pos[11]);
-            tiles[hand].pos.unshift(tiles[hand].pos[11]);
-            tiles[hand].pos.length = 12;
-            rAnim -= Math.PI / 2;
-            if (tiles[hand].stacked != -1) {
-                tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[11]);
-                tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[11]);
-                tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[11]);
-                tiles[hand].pos.length = 12;
+            else if (allowRot == 1){
+                tiles[hand].pos.push(tiles[hand].pos.shift());
+                tiles[hand].pos.push(tiles[hand].pos.shift());
+                tiles[hand].pos.push(tiles[hand].pos.shift());
+                tiles[hand].pos.push(tiles[hand].pos.shift());
+                tiles[hand].pos.push(tiles[hand].pos.shift());
+                tiles[hand].pos.length = 20;
+                rAnim += Math.PI / 2;
             }
-        }
-    }
-    if (keyName === 's') {
-        if (tiles[board[selX][selY]].stacked == -1 && hand != -1 && tiles[hand].stacked == -1) {
-            if (checkStackCompat(board[selX][selY], hand) && checkCompat(selX, selY, hand)) {
-                tiles[board[selX][selY]].stacked = hand;
-                hand = -1;
-                for (let d = 0; d < 3; d++) { //refresh the deck if it needs it upon stacking a tile successfully
-                    if (deck[d] == -1) {
-                        deck[d] = tiles.length;
-                        tiles.push(new Tile());
-                    }
+            if (tiles[hand].stacked != -1) {
+                if (weirdRot == 1) {
+                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
+                    tiles[tiles[hand].stacked].pos.length = 20;
+                }
+                else if (allowRot == 1) {
+                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
+                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
+                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
+                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
+                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
+                    tiles[tiles[hand].stacked].pos.length = 20;
                 }
             }
         }
-        else if (tiles[board[selX][selY]].stacked != -1 && hand == -1) {
-            hand = tiles[board[selX][selY]].stacked;
-            tiles[board[selX][selY]].stacked = -1;
-            if (!checkCompat(selX, selY, board[selX][selY])) {
-                tiles[board[selX][selY]].stacked = hand;
-                hand = -1;
+
+        if (keyName === 'd' && hand != -1) {
+            if (weirdRot == 1){
+                tiles[hand].pos.unshift(tiles[hand].pos[19]);
+                tiles[hand].pos.length = 20;
+            }
+            else if (allowRot == 1){
+                tiles[hand].pos.unshift(tiles[hand].pos[19]);
+                tiles[hand].pos.unshift(tiles[hand].pos[19]);
+                tiles[hand].pos.unshift(tiles[hand].pos[19]);
+                tiles[hand].pos.unshift(tiles[hand].pos[19]);
+                tiles[hand].pos.unshift(tiles[hand].pos[19]);
+                tiles[hand].pos.length = 20;
+                rAnim -= Math.PI / 2;
+            }
+            if (tiles[hand].stacked != -1) {
+                if (weirdRot == 1) {
+                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
+                    tiles[tiles[hand].stacked].pos.length = 20;
+                }
+                else if (allowRot == 1) {
+                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
+                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
+                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
+                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
+                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
+                    tiles[tiles[hand].stacked].pos.length = 20;
+                }
+            }
+        }
+        if (keyName === 's') {
+            if (tiles[board[selX][selY]].stacked == -1 && hand != -1 && tiles[hand].stacked == -1) {
+                if (checkStackCompat(board[selX][selY], hand) && checkCompat(selX, selY, hand)) {
+                    tiles[board[selX][selY]].stacked = hand;
+                    hand = -1;
+                    for (let d = 0; d < 3; d++) { //refresh the deck if it needs it upon stacking a tile successfully
+                        if (deck[d] == -1) {
+                            deck[d] = tiles.length;
+                            tiles.push(new Tile());
+                        }
+                    }
+                }
+            }
+            else if (tiles[board[selX][selY]].stacked != -1 && hand == -1) {
+                hand = tiles[board[selX][selY]].stacked;
+                tiles[board[selX][selY]].stacked = -1;
+                if (!checkCompat(selX, selY, board[selX][selY])) {
+                    tiles[board[selX][selY]].stacked = hand;
+                    hand = -1;
+                }
             }
         }
     }
@@ -329,8 +423,8 @@ canvas.addEventListener('mousemove', (event) => { //tracks mouse movement, does 
 }, false);
 
 canvas.addEventListener('click', (event) => {
-    if (selX != -1) {
-        if (checkCompat(selX, selY, hand)) { //swapping / picking up / putting down tiles
+    if (gameState == "game") {
+        if (selX != -1 && checkCompat(selX, selY, hand)) { //swapping / picking up / putting down tiles
             hand += board[selX][selY];
             board[selX][selY] = hand - board[selX][selY];
             hand -= board[selX][selY];
@@ -341,9 +435,8 @@ canvas.addEventListener('click', (event) => {
                 }
             }
         }
-    }
-    if (cursorY >= 420 && cursorY <= 460) { //the deck
-        if (cursorX >= 90 && cursorX <= 130) {
+    
+        if (pointInArea(cursorX, cursorY, 90, 420, 40, 40)) { //the deck
             if (hand == -1) {
                 hand = deck[0];
                 deck[0] = -1;
@@ -353,7 +446,7 @@ canvas.addEventListener('click', (event) => {
                 hand = -1;
             }
         }
-        if (cursorX >= 180 && cursorX <= 220) {
+        if (pointInArea(cursorX, cursorY, 180, 420, 40, 40)) {
             if (hand == -1) {
                 hand = deck[1];
                 deck[1] = -1;
@@ -363,7 +456,7 @@ canvas.addEventListener('click', (event) => {
                 hand = -1;
             }
         }
-        if (cursorX >= 270 && cursorX <= 310) {
+        if (pointInArea(cursorX, cursorY, 270, 420, 40, 40)) {
             if (hand == -1) {
                 hand = deck[2];
                 deck[2] = -1;
@@ -373,14 +466,108 @@ canvas.addEventListener('click', (event) => {
                 hand = -1;
             }
         }
+
+        if (pointInArea(cursorX, cursorY, 520, 420, 100, 40)) {
+            gameState = "menu";
+        }
+    }
+    else if (gameState == "menu") { ////////////////////////////////////
+        if (pointInArea(cursorX, cursorY, 400, 80, 200, 80)) {
+            ruleInit();
+            newGame();
+            gameStarted = true;
+            gameState = "game";
+        }
+        if (pointInArea(cursorX, cursorY, 400, 400, 200, 60)) {
+            gameState = "menuC";
+        }
+
+        if (gameStarted && pointInArea(cursorX, cursorY, 400, 200, 200, 60)) {
+            gameState = "game";
+        }
+    }
+    else if (gameState == "menuC") { //////////////////////////////////
+        if (selX == 0 && selY == 0) {
+            allowRot = 1 - allowRot;
+        }
+        if (selX == 0 && selY == 1) {
+            weirdRot = 1 - weirdRot;
+        }
+        if (allowRot == 0) {
+            weirdRot = 0;
+        }
+        if (selX == 2 && selY == 0) {
+            asymSides = 1 - asymSides;
+        }
+
+        if (pointInArea(cursorX, cursorY, 380, 420, 120, 40)) {
+            newGame();
+            gameStarted = true;
+            gameState = "game";
+        }
+
+        if (pointInArea(cursorX, cursorY, 520, 420, 100, 40)) {
+            gameStarted = false;
+            gameState = "menu";
+        }
     }
 }, false);
 
 function init() { //starts things up
+    ruleInit();
+    newGame();
     window.requestAnimationFrame(draw);
 }
 
 function draw() {
+    switch (gameState) {
+        case "menu":
+            drawMenu();
+            break;
+        case "menuC":
+            drawMenuC();
+            break;
+        case "game":
+            drawGame();
+            break;
+        default:
+    }
+    window.requestAnimationFrame(draw);
+}
+
+function drawMenu() { ///////////////////////////////////////////////////////////////////////
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, 640, 480);
+
+    ctx.fillStyle = col[1];
+    ctx.fillRect(0, 0, 640, 480); //The background
+
+    ctx.fillStyle = col[0];
+    ctx.fillRect(400, 80, 200, 80);
+    if (gameStarted) {
+        ctx.fillRect(400, 200, 200, 60);
+    }
+    ctx.fillRect(400, 400, 200, 60);
+
+    ctx.fillStyle = col[2];
+    ctx.font = "64px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("TileSide", 200, 75);
+    if (!gameStarted) {
+        ctx.fillText("PLAY", 500, 140);
+    }
+
+    if (gameStarted) {
+        ctx.font = "36px monospace";
+        ctx.fillText("New Game", 500, 132);
+        ctx.fillText("Continue", 500, 240);
+    }
+
+    ctx.font = "48px monospace";
+    ctx.fillText("Custom", 500, 445);
+}
+
+function drawMenuC() { ////////////////////////////////////////////////////////////////////////////
     const ctx = canvas.getContext("2d");
     ctx.clearRect(0, 0, 640, 480);
 
@@ -389,11 +576,75 @@ function draw() {
     ctx.fillStyle = col[0];
     ctx.fillRect(40, 80, 320, 320);
 
+    ctx.fillRect(380, 420, 120, 40);
+    ctx.fillRect(520, 420, 100, 40);
+
+    ctx.strokeStyle = col[1]; //draws a grid
+    ctx.lineWidth = 1;
+    for (let f = 0; f < 7; f++) {
+        ctx.beginPath();
+        ctx.moveTo((40 * f) + 80, 80);
+        ctx.lineTo((40 * f) + 80, 400);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(40, (40 * f) + 120);
+        ctx.lineTo(360, (40 * f) + 120);
+        ctx.stroke();
+    }
+
+    ctx.strokeStyle = col[1];
+    ctx.fillStyle = col[1];
+    ctx.beginPath();
+    ctx.arc(60, 100, 15, 0, Math.PI * 2);
+    allowRot == 1 ? ctx.fill() : ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(60, 140, 15, 0, Math.PI * 2);
+    weirdRot == 1 ? ctx.fill() : ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(140, 100, 15, 0, Math.PI * 2);
+    asymSides == 1 ? ctx.fill() : ctx.stroke();
+
+    ctx.fillStyle = col[2];
+    ctx.font = "32px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("Begin", 440, 450);
+    ctx.fillText("Menu", 570, 450);
+
+    ctx.font = "20px monospace";
+    if (selX == 0 && selY == 0) {
+        ctx.fillText("Allow Rotation", 500, 110);
+        ctx.fillText(allowRot == 1 ? "On" : "Off", 500, 150);
+    }
+    if (selX == 0 && selY == 1) {
+        ctx.fillText("Weird Rotation", 500, 110);
+        ctx.fillText(weirdRot == 1 ? "On" : "Off", 500, 150);
+    }
+    if (selX == 2 && selY == 0) {
+        ctx.fillText("Asymmetrical Sides", 500, 110);
+        ctx.fillText(asymSides == 1 ? "On" : "Off", 500, 150);
+    }
+}
+
+function drawGame() { //////////////////////////////////////////////////////////////////////
+    const ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, 640, 480);
+
+    ctx.fillStyle = col[1];
+    ctx.fillRect(0, 0, 640, 480); //The background
+    ctx.fillStyle = col[0];
+    ctx.fillRect(40, 80, 320, 320);
+
+    ctx.fillRect(520, 420, 100, 40);
+
     ctx.fillStyle = col[2];
     ctx.font = "16px monospace";
     ctx.textAlign = "left";
     calcScore();
     ctx.fillText("Score: " + score, 40, 72); //Draws the score
+
+    ctx.font = "32px monospace";
+    ctx.textAlign = "center";
+    ctx.fillText("Menu", 570, 450);
     
     ctx.strokeStyle = col[0];
     ctx.lineWidth = 2;
@@ -413,6 +664,11 @@ function draw() {
     ctx.lineTo(620, 260);
     ctx.lineTo(600, 260);
     ctx.stroke();
+
+    ctx.fillStyle = col[0];
+    ctx.font = "16px monospace";
+    ctx.fillText("BOARD", 500, 95);
+    ctx.fillText("HAND", 500, 395);
 
     ctx.strokeStyle = col[1]; //draws a grid
     ctx.lineWidth = 1;
@@ -442,11 +698,13 @@ function draw() {
                 ctx.fillStyle = col[0];
                 ctx.fillRect(m * 40 + 40, n * 40 + 80, 40, 40); //This draws the white part of a tile
                 if (tiles[board[m][n]].stacked != -1) {
+                    ctx.translate(m * 40 + 60, n * 40 + 100);
                     ctx.strokeStyle = col[1];
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(m * 40 + 50, n * 40 + 90, 20, 20);
                     ctx.lineWidth = 1;
-                    ctx.strokeRect(m * 40 + 45, n * 40 + 85, 30, 30);
+                    ctx.strokeRect(-10, -10, 20, 20);
+                    ctx.rotate(Math.PI / 4);
+                    ctx.strokeRect(-10, -10, 20, 20);
+                    ctx.resetTransform();
                 }
                 tiles[board[m][n]].rPos = calcRPos(board[m][n], tiles[board[m][n]].stacked);
                 displayPos(ctx, tiles[board[m][n]].rPos, m * 40 + 60, n * 40 + 100, 40, 0); //This draws the positions / sides
@@ -494,9 +752,17 @@ function draw() {
     if (hand != -1) {
         for (let n = 0; n < 8; n++) {
             for (let m = 0; m < 8; m++) {
-                if (!checkCompat(m, n, hand)) { //Draws a block on any space where the currently held tile can't be put down
-                    ctx.fillStyle = "#7F7F7F";
-                    ctx.fillRect(m * 40 + 50, n * 40 + 90, 20, 20);
+                if (!checkCompat(m, n, hand)) { //Draws an X on any space where the currently held tile can't be put down
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = "#7F7F7F";
+                    ctx.beginPath();
+                    ctx.moveTo(m * 40 + 40, n * 40 + 80);
+                    ctx.lineTo(m * 40 + 80, n * 40 + 120);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(m * 40 + 80, n * 40 + 80);
+                    ctx.lineTo(m * 40 + 40, n * 40 + 120);
+                    ctx.stroke();
                 }
                 else if (checkStackCompat(board[m][n], hand) && tiles[board[m][n]].stacked == -1 && tiles[hand].stacked == -1) {
                     ctx.lineWidth = 1;
@@ -513,8 +779,8 @@ function draw() {
         ctx.lineWidth = 1;
         ctx.strokeRect(-25, -25, 50, 50);
         if (tiles[hand].stacked != -1) {
-            ctx.strokeRect(-18, -18, 36, 36);
-            ctx.lineWidth = 2;
+            ctx.strokeRect(-12, -12, 24, 24);
+            ctx.rotate(Math.PI / 4);
             ctx.strokeRect(-12, -12, 24, 24);
         }
         ctx.resetTransform();
@@ -574,8 +840,6 @@ function draw() {
             }
         }
     }
-
-    window.requestAnimationFrame(draw);
 }
 
 init();
