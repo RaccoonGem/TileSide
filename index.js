@@ -5,19 +5,25 @@ let cursorY = 0;
 let selX = -1; //The coordinates of the square on the board that the mouse is hovering over
 let selY = -1; //(both will be -1 when it's off the board)
 let hand = -1; //The number of the tile being held by the player (-1 if they aren't holding one)
-let deck = [0, 1, 2]; //The number of each tile in the three slots at the bottom
+let deck = []; //The number of each tile in the slots at the bottom
 let score = 0;
 let rAnim = 0;
 let gameState = "menu";
 let gameStarted = false;
+let timer = 0;
 
 let allowRot = 0;
 let weirdRot = 0;
-let asymSides = 0;
 
-let col = ["#FFFFFF", "#BFBFBF", "#000000", "#FF0000", "#00BF00", "#0000FF"]; //The hex values of the game's colors. The first is the color of a tile, the rest are for the sides
-//col.push("#FFDF00");
-let colN = col.length - 2; //The number of colors for tile sides to choose from
+let asymSides = 0;
+let colN = 4; //The number of colors for tile sides to choose from
+
+let deckSlots = 3;
+
+let col = ["#FFFFFF", "#BFBFBF", "#000000", "#FF0000", "#00BF00", "#0000FF", "#FFDF00", "#00FFFF", "#FF00FF", "#FF7F00", "#7F00FF"]; //The hex values of the game's colors. The first is the color of a tile, the rest are for the sides
+let colScheme = 0;
+let colSchemeName = ["Default", "Graph Paper", "Geothermal"];
+
 let board = [
     [,,,,,,,],
     [,,,,,,,],
@@ -125,17 +131,21 @@ function Tile () { //Constructor for tiles. The parameters are what color each s
 function ruleInit() {
     allowRot = 1;
     weirdRot = 0;
+
     asymSides = 0;
-    
+    colN = 4;
+
+    deckSlots = 3;
 }
 
 function newGame() {
     tiles = [];
-    deck = [0, 1, 2];
     hand = -1;
-    tiles[0] = new Tile(); //Creates the opening set of tiles in the deck
-    tiles.push(new Tile());
-    tiles.push(new Tile());
+    deck.length = deckSlots; //Creates the opening set of tiles in the deck
+    for (let f = 0; f < deckSlots; f++) {
+        tiles.push(new Tile());
+        deck[f] = f;
+    }
     for (let n = 0; n < 8; n++) { //Makes it so each spot on the board array is -1 / empty
         for (let m = 0; m < 8; m++) {
             board[m][n] = -1;
@@ -171,8 +181,7 @@ function checkSide(t1, t2, s) { //t1 and t2 are the numbers of the two tiles bei
         if (tiles[t1].rPos[S] * tiles[t2].rPos[match(S)] != 0) {
             if (tiles[t1].rPos[S] != tiles[t2].rPos[match(S)]) {
                 return -1; //If they are not compatible, -1 will be returned instead.
-            }
-            else {
+            } else {
                 scoreToAdd += 1;
             }
         }
@@ -236,10 +245,7 @@ function calcScore() { //racks up the score of the entire board
 }
 
 function pointInArea(pX, pY, aX, aY, aW, aH) {
-    if (pX >= aX && pX <= (aX + aW) && pY >= aY && pY <= (aY + aH)) {
-        return true;
-    }
-    return false;
+    return (pX >= aX && pX <= (aX + aW) && pY >= aY && pY <= (aY + aH));
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -262,8 +268,7 @@ function displayPos(c, t, x, y, s, r) { //parameters are Canvas, Tile (an array 
             case 0:
                 if (t[(p + 19) % 20] == t[p]) {
                     c.fillRect(-5, -5, 2, 2);
-                }
-                else {
+                } else {
                     c.beginPath();
                     c.moveTo(-5, -5);
                     c.lineTo(-3, -5);
@@ -331,8 +336,7 @@ document.addEventListener('keydown', (event) => { //Key presses, for rotating an
             if (weirdRot == 1){
                 tiles[hand].pos.push(tiles[hand].pos.shift());
                 tiles[hand].pos.length = 20;
-            }
-            else if (allowRot == 1){
+            } else if (allowRot == 1){
                 tiles[hand].pos.push(tiles[hand].pos.shift());
                 tiles[hand].pos.push(tiles[hand].pos.shift());
                 tiles[hand].pos.push(tiles[hand].pos.shift());
@@ -345,8 +349,7 @@ document.addEventListener('keydown', (event) => { //Key presses, for rotating an
                 if (weirdRot == 1) {
                     tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
                     tiles[tiles[hand].stacked].pos.length = 20;
-                }
-                else if (allowRot == 1) {
+                } else if (allowRot == 1) {
                     tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
                     tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
                     tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
@@ -361,8 +364,7 @@ document.addEventListener('keydown', (event) => { //Key presses, for rotating an
             if (weirdRot == 1){
                 tiles[hand].pos.unshift(tiles[hand].pos[19]);
                 tiles[hand].pos.length = 20;
-            }
-            else if (allowRot == 1){
+            } else if (allowRot == 1){
                 tiles[hand].pos.unshift(tiles[hand].pos[19]);
                 tiles[hand].pos.unshift(tiles[hand].pos[19]);
                 tiles[hand].pos.unshift(tiles[hand].pos[19]);
@@ -375,8 +377,7 @@ document.addEventListener('keydown', (event) => { //Key presses, for rotating an
                 if (weirdRot == 1) {
                     tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
                     tiles[tiles[hand].stacked].pos.length = 20;
-                }
-                else if (allowRot == 1) {
+                } else if (allowRot == 1) {
                     tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
                     tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
                     tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
@@ -398,8 +399,7 @@ document.addEventListener('keydown', (event) => { //Key presses, for rotating an
                         }
                     }
                 }
-            }
-            else if (tiles[board[selX][selY]].stacked != -1 && hand == -1) {
+            } else if (tiles[board[selX][selY]].stacked != -1 && hand == -1) {
                 hand = tiles[board[selX][selY]].stacked;
                 tiles[board[selX][selY]].stacked = -1;
                 if (!checkCompat(selX, selY, board[selX][selY])) {
@@ -428,50 +428,30 @@ canvas.addEventListener('click', (event) => {
             hand += board[selX][selY];
             board[selX][selY] = hand - board[selX][selY];
             hand -= board[selX][selY];
-            for (let d = 0; d < 3; d++) { //refresh the deck if it needs it upon placing a tile successfully
+            for (let d = 0; d < deckSlots; d++) { //refresh the deck if it needs it upon placing a tile successfully
                 if (deck[d] == -1) {
                     deck[d] = tiles.length;
                     tiles.push(new Tile());
                 }
             }
         }
-    
-        if (pointInArea(cursorX, cursorY, 90, 420, 40, 40)) { //the deck
-            if (hand == -1) {
-                hand = deck[0];
-                deck[0] = -1;
-            }
-            else if (deck[0] == -1) {
-                deck[0] = hand;
-                hand = -1;
-            }
-        }
-        if (pointInArea(cursorX, cursorY, 180, 420, 40, 40)) {
-            if (hand == -1) {
-                hand = deck[1];
-                deck[1] = -1;
-            }
-            else if (deck[1] == -1) {
-                deck[1] = hand;
-                hand = -1;
-            }
-        }
-        if (pointInArea(cursorX, cursorY, 270, 420, 40, 40)) {
-            if (hand == -1) {
-                hand = deck[2];
-                deck[2] = -1;
-            }
-            else if (deck[2] == -1) {
-                deck[2] = hand;
-                hand = -1;
+        
+        for (let f = 0; f < deckSlots; f++) { // the deck
+            if (pointInArea(cursorX, cursorY, Math.round((320 / (deckSlots + 1)) * (f + 1)) + 20, 420, 40, 40)) {
+                if (hand == -1) {
+                    hand = deck[f];
+                    deck[f] = -1;
+                } else if (deck[f] == -1) {
+                    deck[f] = hand;
+                    hand = -1;
+                }
             }
         }
 
-        if (pointInArea(cursorX, cursorY, 520, 420, 100, 40)) {
+        if (pointInArea(cursorX, cursorY, 520, 420, 100, 40)) { //The menu button
             gameState = "menu";
         }
-    }
-    else if (gameState == "menu") { ////////////////////////////////////
+    } else if (gameState == "menu") { ////////////////////////////////////
         if (pointInArea(cursorX, cursorY, 400, 80, 200, 80)) {
             ruleInit();
             newGame();
@@ -485,8 +465,23 @@ canvas.addEventListener('click', (event) => {
         if (gameStarted && pointInArea(cursorX, cursorY, 400, 200, 200, 60)) {
             gameState = "game";
         }
-    }
-    else if (gameState == "menuC") { //////////////////////////////////
+
+        if (pointInArea(cursorX, cursorY, 20, 420, 40, 40)) {
+            colScheme = (colScheme + 1) % colSchemeName.length;
+            switch (colScheme) {
+                case 0:
+                    col = ["#FFFFFF", "#BFBFBF", "#000000", "#FF0000", "#00BF00", "#0000FF", "#FFDF00", "#00FFFF", "#FF00FF", "#FF7F00", "#7F00FF"];
+                    break;
+                case 1:
+                    col = ["#FFFFDF", "#6F6F6F", "#000000", "#005FFF", "#FF0000", "#00BF00", "#7F7F7F", "#00009F", "#8F0000", "#007F00", "#FF00FF"];
+                    break;
+                case 2:
+                    col = ["#00007F", "#9F9F9F", "#FFFFFF", "#FFDF00", "#FF7F00", "#FF0000", "#BFBFBF", "#00FFFF", "#0000FF", "#FF00FF", "#00FF00"];
+                    break;
+                default:
+            }
+        }
+    } else if (gameState == "menuC") { //////////////////////////////////
         if (selX == 0 && selY == 0) {
             allowRot = 1 - allowRot;
         }
@@ -496,8 +491,16 @@ canvas.addEventListener('click', (event) => {
         if (allowRot == 0) {
             weirdRot = 0;
         }
+
         if (selX == 2 && selY == 0) {
             asymSides = 1 - asymSides;
+        }
+        if (selX == 2 && selY == 1) {
+            colN = (colN % (col.length - 2)) + 1;
+        }
+
+        if (selX == 4 && selY == 0) {
+            deckSlots = (deckSlots % 5) + 1;
         }
 
         if (pointInArea(cursorX, cursorY, 380, 420, 120, 40)) {
@@ -548,6 +551,15 @@ function drawMenu() { //////////////////////////////////////////////////////////
         ctx.fillRect(400, 200, 200, 60);
     }
     ctx.fillRect(400, 400, 200, 60);
+    ctx.fillRect(20, 420, 40, 40);
+
+    for (let f = 0; f < colN; f++) {
+        ctx.fillStyle = col[f + 2];
+        ctx.beginPath();
+        ctx.moveTo(40, 440);
+        ctx.arc(40, 440, 15, ((f / colN) - (1 / 4)) * Math.PI * 2, (((f + 1) / colN) - (1 / 4)) * Math.PI * 2);
+        ctx.fill();
+    }
 
     ctx.fillStyle = col[2];
     ctx.font = "64px monospace";
@@ -565,6 +577,10 @@ function drawMenu() { //////////////////////////////////////////////////////////
 
     ctx.font = "48px monospace";
     ctx.fillText("Custom", 500, 445);
+
+    ctx.font = "18px monospace";
+    ctx.textAlign = "left";
+    ctx.fillText("Color Scheme: " + colSchemeName[colScheme], 65, 447);
 }
 
 function drawMenuC() { ////////////////////////////////////////////////////////////////////////////
@@ -603,6 +619,17 @@ function drawMenuC() { /////////////////////////////////////////////////////////
     ctx.beginPath();
     ctx.arc(140, 100, 15, 0, Math.PI * 2);
     asymSides == 1 ? ctx.fill() : ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(220, 100, 15, 0, Math.PI * 2);
+    deckSlots == 1 ? ctx.stroke() : ctx.fill();
+
+    for (let f = 0; f < colN; f++) {
+        ctx.fillStyle = col[f + 2];
+        ctx.beginPath();
+        ctx.moveTo(140, 140);
+        ctx.arc(140, 140, 15, ((f / colN) - (1 / 4)) * Math.PI * 2, (((f + 1) / colN) - (1 / 4)) * Math.PI * 2);
+        ctx.fill();
+    }
 
     ctx.fillStyle = col[2];
     ctx.font = "32px monospace";
@@ -622,6 +649,28 @@ function drawMenuC() { /////////////////////////////////////////////////////////
     if (selX == 2 && selY == 0) {
         ctx.fillText("Asymmetrical Sides", 500, 110);
         ctx.fillText(asymSides == 1 ? "On" : "Off", 500, 150);
+    }
+    if (selX == 2 && selY == 1) {
+        ctx.fillText("Colors", 500, 110);
+        ctx.fillText(colN, 500, 150);
+    }
+    if (selX == 4 && selY == 0) {
+        ctx.fillText("Deck Slots", 500, 110);
+        ctx.fillText(deckSlots, 500, 150);
+    }
+
+    timer += 1;
+    if (timer == 60) {
+        tiles = [];
+        for (let f = 0; f < deckSlots; f++) {
+            tiles.push(new Tile());
+        }
+        timer = 0;
+    }
+    for (let f = 0; f < tiles.length; f++) {
+        ctx.fillStyle = col[0];
+        ctx.fillRect(Math.round((320 / (tiles.length + 1)) * (f + 1)) + 20, 420, 40, 40);
+        displayPos(ctx, tiles[f].pos, Math.round((320 / (tiles.length + 1)) * (f + 1)) + 40, 440, 40, 0);
     }
 }
 
@@ -737,15 +786,14 @@ function drawGame() { //////////////////////////////////////////////////////////
         }
     }
 
-    for (let f = 0; f < 3; f++) {
+    for (let f = 0; f < deckSlots; f++) {
         if (deck[f] != -1) { //Draws the deck
             ctx.fillStyle = col[0];
-            ctx.fillRect((f + 1) * 90, 420, 40, 40);
-            displayPos(ctx, tiles[deck[f]].pos, (f + 1) * 90 + 20, 440, 40, 0);
-        }
-        else {
+            ctx.fillRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 20, 420, 40, 40);
+            displayPos(ctx, tiles[deck[f]].pos, Math.round((320 / (deckSlots + 1)) * (f + 1)) + 40, 440, 40, 0);
+        } else {
             ctx.fillStyle = "#AFAFAF"; //The deck slot, if empty, is a gray square
-            ctx.fillRect((f + 1) * 90, 420, 40, 40);
+            ctx.fillRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 20, 420, 40, 40);
         }
     }
 
@@ -763,8 +811,7 @@ function drawGame() { //////////////////////////////////////////////////////////
                     ctx.moveTo(m * 40 + 80, n * 40 + 80);
                     ctx.lineTo(m * 40 + 40, n * 40 + 120);
                     ctx.stroke();
-                }
-                else if (checkStackCompat(board[m][n], hand) && tiles[board[m][n]].stacked == -1 && tiles[hand].stacked == -1) {
+                } else if (checkStackCompat(board[m][n], hand) && tiles[board[m][n]].stacked == -1 && tiles[hand].stacked == -1) {
                     ctx.lineWidth = 1;
                     ctx.strokeStyle = col[2];
                     ctx.strokeRect(m * 40 + 50, n * 40 + 90, 20, 20);
