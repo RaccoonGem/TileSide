@@ -2,6 +2,13 @@ body {
     background-color: #7F7F7F;
     margin: 5%;
 }
+
+#game {
+    width: 640px;
+    height: 480px;
+    position: relative;
+}
+
 canvas {
-    background-color: white;
+    position: absolute;
 }

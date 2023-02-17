@@ -1,4 +1,10 @@
-const canvas = document.getElementById("canvas");
+const canvasBG = document.getElementById("background");
+const canvasML = document.getElementById("midLayer");
+const canvasTL = document.getElementById("topLayer");
+
+const ctxBG = canvasBG.getContext("2d");
+const ctxML = canvasML.getContext("2d");
+const ctxTL = canvasTL.getContext("2d");
 
 let cursorX = 0; //The position of the mouse when it's on the canvas
 let cursorY = 0;
@@ -19,6 +25,7 @@ let asymSides = 0;
 let colN = 4; //The number of colors for tile sides to choose from
 
 let deckSlots = 3;
+let deckBehavior = 0; //0: no slots refresh until all empty. 1: empty slot refreshes. 2: all slots refresh.
 
 let col = ["#FFFFFF", "#BFBFBF", "#000000", "#FF0000", "#00BF00", "#0000FF", "#FFDF00", "#00FFFF", "#FF00FF", "#FF7F00", "#7F00FF"]; //The hex values of the game's colors. The first is the color of a tile, the rest are for the sides
 let colScheme = 0;
@@ -136,6 +143,7 @@ function ruleInit() {
     colN = 4;
 
     deckSlots = 3;
+    deckBehavior = 1;
 }
 
 function newGame() {
@@ -248,6 +256,50 @@ function pointInArea(pX, pY, aX, aY, aW, aH) {
     return (pX >= aX && pX <= (aX + aW) && pY >= aY && pY <= (aY + aH));
 }
 
+function refreshDeck() {
+    switch (deckBehavior) {
+        case 0:
+            let allEmpty = true;
+            for (let f = 0; f < deckSlots; f++) {
+                if (deck[f] != -1) {
+                    allEmpty = false;
+                }
+            }
+            if (!allEmpty) break;
+            for (let f = 0; f < deckSlots; f++) {
+                deck[f] = tiles.length;
+                tiles.push(new Tile());
+            }
+            break;
+        case 1:
+            for (let f = 0; f < deckSlots; f++) {
+                if (deck[f] == -1) {
+                    deck[f] = tiles.length;
+                    tiles.push(new Tile());
+                }
+            }
+            break;
+        case 2:
+            let anyEmpty = false;
+            for (let f = 0; f < deckSlots; f++) {
+                if (deck[f] == -1) {
+                    anyEmpty = true;
+                }
+            }
+            if (!anyEmpty) break;
+            for (let f = 0; f < deckSlots; f++) {
+                if (deck[f] == -1) {
+                    deck[f] = tiles.length;
+                    tiles.push(new Tile());
+                } else {
+                    tiles[deck[f]] = new Tile();
+                }
+            }
+            break;
+        default:
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 function displayPos(c, t, x, y, s, r) { //parameters are Canvas, Tile (an array of its 20 positions), X and Y coordinates, Size, and Rotation
@@ -358,6 +410,7 @@ document.addEventListener('keydown', (event) => { //Key presses, for rotating an
                     tiles[tiles[hand].stacked].pos.length = 20;
                 }
             }
+            drawTiles();
         }
 
         if (keyName === 'd' && hand != -1) {
@@ -386,18 +439,15 @@ document.addEventListener('keydown', (event) => { //Key presses, for rotating an
                     tiles[tiles[hand].stacked].pos.length = 20;
                 }
             }
+            drawTiles();
         }
+
         if (keyName === 's') {
             if (tiles[board[selX][selY]].stacked == -1 && hand != -1 && tiles[hand].stacked == -1) {
                 if (checkStackCompat(board[selX][selY], hand) && checkCompat(selX, selY, hand)) {
                     tiles[board[selX][selY]].stacked = hand;
                     hand = -1;
-                    for (let d = 0; d < 3; d++) { //refresh the deck if it needs it upon stacking a tile successfully
-                        if (deck[d] == -1) {
-                            deck[d] = tiles.length;
-                            tiles.push(new Tile());
-                        }
-                    }
+                    refreshDeck(); //refresh the deck if it needs it upon stacking a tile successfully
                 }
             } else if (tiles[board[selX][selY]].stacked != -1 && hand == -1) {
                 hand = tiles[board[selX][selY]].stacked;
@@ -407,11 +457,12 @@ document.addEventListener('keydown', (event) => { //Key presses, for rotating an
                     hand = -1;
                 }
             }
+            drawTiles();
         }
     }
 }, false);
 
-canvas.addEventListener('mousemove', (event) => { //tracks mouse movement, does the math for what's selected
+canvasTL.addEventListener('mousemove', (event) => { //tracks mouse movement, does the math for what's selected
     cursorX = event.offsetX;
     cursorY = event.offsetY;
     selX = Math.round((cursorX - 60) / 40);
@@ -422,18 +473,13 @@ canvas.addEventListener('mousemove', (event) => { //tracks mouse movement, does 
     }
 }, false);
 
-canvas.addEventListener('click', (event) => {
+canvasTL.addEventListener('click', (event) => {
     if (gameState == "game") {
         if (selX != -1 && checkCompat(selX, selY, hand)) { //swapping / picking up / putting down tiles
             hand += board[selX][selY];
             board[selX][selY] = hand - board[selX][selY];
             hand -= board[selX][selY];
-            for (let d = 0; d < deckSlots; d++) { //refresh the deck if it needs it upon placing a tile successfully
-                if (deck[d] == -1) {
-                    deck[d] = tiles.length;
-                    tiles.push(new Tile());
-                }
-            }
+            refreshDeck(); //refresh the deck if it needs it upon placing a tile successfully
         }
         
         for (let f = 0; f < deckSlots; f++) { // the deck
@@ -450,7 +496,9 @@ canvas.addEventListener('click', (event) => {
 
         if (pointInArea(cursorX, cursorY, 520, 420, 100, 40)) { //The menu button
             gameState = "menu";
+            requestAnimationFrame(draw);
         }
+        else drawTiles();
     } else if (gameState == "menu") { ////////////////////////////////////
         if (pointInArea(cursorX, cursorY, 400, 80, 200, 80)) {
             ruleInit();
@@ -481,6 +529,7 @@ canvas.addEventListener('click', (event) => {
                 default:
             }
         }
+        requestAnimationFrame(draw);
     } else if (gameState == "menuC") { //////////////////////////////////
         if (selX == 0 && selY == 0) {
             allowRot = 1 - allowRot;
@@ -502,16 +551,21 @@ canvas.addEventListener('click', (event) => {
         if (selX == 4 && selY == 0) {
             deckSlots = (deckSlots % 5) + 1;
         }
+        if (selX == 4 && selY == 1) {
+            deckBehavior = (deckBehavior + 1) % 3;
+        }
 
         if (pointInArea(cursorX, cursorY, 380, 420, 120, 40)) {
             newGame();
             gameStarted = true;
             gameState = "game";
+            requestAnimationFrame(draw);
         }
 
         if (pointInArea(cursorX, cursorY, 520, 420, 100, 40)) {
             gameStarted = false;
             gameState = "menu";
+            requestAnimationFrame(draw);
         }
     }
 }, false);
@@ -519,10 +573,13 @@ canvas.addEventListener('click', (event) => {
 function init() { //starts things up
     ruleInit();
     newGame();
-    window.requestAnimationFrame(draw);
+    draw();
 }
 
 function draw() {
+    ctxBG.clearRect(0, 0, 640, 480);
+    ctxML.clearRect(0, 0, 640, 480);
+    ctxTL.clearRect(0, 0, 640, 480);
     switch (gameState) {
         case "menu":
             drawMenu();
@@ -531,15 +588,16 @@ function draw() {
             drawMenuC();
             break;
         case "game":
-            drawGame();
+            drawBG();
+            drawTiles();
+            drawCursor();
             break;
         default:
     }
-    window.requestAnimationFrame(draw);
 }
 
 function drawMenu() { ///////////////////////////////////////////////////////////////////////
-    const ctx = canvas.getContext("2d");
+    const ctx = canvasBG.getContext("2d");
     ctx.clearRect(0, 0, 640, 480);
 
     ctx.fillStyle = col[1];
@@ -584,7 +642,7 @@ function drawMenu() { //////////////////////////////////////////////////////////
 }
 
 function drawMenuC() { ////////////////////////////////////////////////////////////////////////////
-    const ctx = canvas.getContext("2d");
+    const ctx = canvasBG.getContext("2d");
     ctx.clearRect(0, 0, 640, 480);
 
     ctx.fillStyle = col[1];
@@ -622,6 +680,9 @@ function drawMenuC() { /////////////////////////////////////////////////////////
     ctx.beginPath();
     ctx.arc(220, 100, 15, 0, Math.PI * 2);
     deckSlots == 1 ? ctx.stroke() : ctx.fill();
+    ctx.beginPath();
+    ctx.arc(220, 140, 15, 0, Math.PI * 2);
+    ctx.stroke();
 
     for (let f = 0; f < colN; f++) {
         ctx.fillStyle = col[f + 2];
@@ -658,6 +719,10 @@ function drawMenuC() { /////////////////////////////////////////////////////////
         ctx.fillText("Deck Slots", 500, 110);
         ctx.fillText(deckSlots, 500, 150);
     }
+    if (selX == 4 && selY == 1) {
+        ctx.fillText("Deck Refresh Behavior", 500, 110);
+        ctx.fillText("Refresh " + (deckBehavior == 0 ? "All When Empty" : (deckBehavior == 1 ? "Used Slot Only" : "All Slots")), 500, 150);
+    }
 
     timer += 1;
     if (timer == 60) {
@@ -672,71 +737,79 @@ function drawMenuC() { /////////////////////////////////////////////////////////
         ctx.fillRect(Math.round((320 / (tiles.length + 1)) * (f + 1)) + 20, 420, 40, 40);
         displayPos(ctx, tiles[f].pos, Math.round((320 / (tiles.length + 1)) * (f + 1)) + 40, 440, 40, 0);
     }
+
+    if (gameState == "menuC") {
+        requestAnimationFrame(drawMenuC);
+    }
 }
 
 function drawGame() { //////////////////////////////////////////////////////////////////////
-    const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, 640, 480);
 
-    ctx.fillStyle = col[1];
-    ctx.fillRect(0, 0, 640, 480); //The background
-    ctx.fillStyle = col[0];
-    ctx.fillRect(40, 80, 320, 320);
+}
 
-    ctx.fillRect(520, 420, 100, 40);
+function drawBG() { /////////////////////////////////////////////////////////////
+    ctxBG.clearRect(0, 0, 640, 480);
+    ctxBG.fillStyle = col[1];
+    ctxBG.fillRect(0, 0, 640, 480); //The background
+    ctxBG.fillStyle = col[0];
+    ctxBG.fillRect(40, 80, 320, 320);
 
-    ctx.fillStyle = col[2];
-    ctx.font = "16px monospace";
-    ctx.textAlign = "left";
-    calcScore();
-    ctx.fillText("Score: " + score, 40, 72); //Draws the score
-
-    ctx.font = "32px monospace";
-    ctx.textAlign = "center";
-    ctx.fillText("Menu", 570, 450);
+    ctxBG.font = "16px monospace";
+    ctxBG.textAlign = "center";
+    ctxBG.fillText("BOARD", 500, 95);
+    ctxBG.fillText("HAND", 500, 395);
     
-    ctx.strokeStyle = col[0];
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(400, 220);
-    ctx.lineTo(380, 220);
-    ctx.lineTo(380, 100);
-    ctx.lineTo(620, 100);
-    ctx.lineTo(620, 220);
-    ctx.lineTo(600, 220);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(400, 260);
-    ctx.lineTo(380, 260);
-    ctx.lineTo(380, 380);
-    ctx.lineTo(620, 380);
-    ctx.lineTo(620, 260);
-    ctx.lineTo(600, 260);
-    ctx.stroke();
+    ctxBG.strokeStyle = col[0];
+    ctxBG.lineWidth = 2;
+    ctxBG.beginPath();
+    ctxBG.moveTo(400, 220);
+    ctxBG.lineTo(380, 220);
+    ctxBG.lineTo(380, 100);
+    ctxBG.lineTo(620, 100);
+    ctxBG.lineTo(620, 220);
+    ctxBG.lineTo(600, 220);
+    ctxBG.stroke();
+    ctxBG.beginPath();
+    ctxBG.moveTo(400, 260);
+    ctxBG.lineTo(380, 260);
+    ctxBG.lineTo(380, 380);
+    ctxBG.lineTo(620, 380);
+    ctxBG.lineTo(620, 260);
+    ctxBG.lineTo(600, 260);
+    ctxBG.stroke();
 
-    ctx.fillStyle = col[0];
-    ctx.font = "16px monospace";
-    ctx.fillText("BOARD", 500, 95);
-    ctx.fillText("HAND", 500, 395);
+    ctxBG.fillRect(520, 420, 100, 40);
+    ctxBG.fillStyle = col[2];
+    ctxBG.font = "32px monospace";
+    ctxBG.fillText("Menu", 570, 450);
 
-    ctx.strokeStyle = col[1]; //draws a grid
-    ctx.lineWidth = 1;
+    ctxBG.strokeStyle = col[1]; //draws a grid
+    ctxBG.lineWidth = 1;
     for (let f = 0; f < 7; f++) {
-        ctx.beginPath();
-        ctx.moveTo((40 * f) + 80, 80);
-        ctx.lineTo((40 * f) + 80, 400);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(40, (40 * f) + 120);
-        ctx.lineTo(360, (40 * f) + 120);
-        ctx.stroke();
+        ctxBG.beginPath();
+        ctxBG.moveTo((40 * f) + 80, 80);
+        ctxBG.lineTo((40 * f) + 80, 400);
+        ctxBG.stroke();
+        ctxBG.beginPath();
+        ctxBG.moveTo(40, (40 * f) + 120);
+        ctxBG.lineTo(360, (40 * f) + 120);
+        ctxBG.stroke();
     }
+}
 
-    ctx.fillStyle = col[1];
+function drawTiles() { ////////////////////////////////////////////////////////////
+    ctxML.clearRect(0, 0, 640, 480);
+    ctxML.fillStyle = col[2];
+    ctxML.font = "16px monospace";
+    ctxML.textAlign = "left";
+    calcScore();
+    ctxML.fillText("Score: " + score, 40, 72); //Draws the score
+
+    ctxML.fillStyle = col[1];
     for (let n = 0; n < 8; n++) {
         for (let m = 0; m < 8; m++) {
             if (board[m][n] != -1) {
-                ctx.fillRect(m * 40 + 38, n * 40 + 78, 44, 44); //Puts a kind of outline/shadow behind all tiles on the board
+                ctxML.fillRect(m * 40 + 38, n * 40 + 78, 44, 44); //Puts a kind of outline/shadow behind all tiles on the board
             }
         }
     }
@@ -744,56 +817,31 @@ function drawGame() { //////////////////////////////////////////////////////////
     for (let n = 0; n < 8; n++) {
         for (let m = 0; m < 8; m++) {
             if (board[m][n] != -1) {
-                ctx.fillStyle = col[0];
-                ctx.fillRect(m * 40 + 40, n * 40 + 80, 40, 40); //This draws the white part of a tile
+                ctxML.fillStyle = col[0];
+                ctxML.fillRect(m * 40 + 40, n * 40 + 80, 40, 40); //This draws the white part of a tile
                 if (tiles[board[m][n]].stacked != -1) {
-                    ctx.translate(m * 40 + 60, n * 40 + 100);
-                    ctx.strokeStyle = col[1];
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(-10, -10, 20, 20);
-                    ctx.rotate(Math.PI / 4);
-                    ctx.strokeRect(-10, -10, 20, 20);
-                    ctx.resetTransform();
+                    ctxML.translate(m * 40 + 60, n * 40 + 100);
+                    ctxML.strokeStyle = col[1];
+                    ctxML.lineWidth = 1;
+                    ctxML.strokeRect(-10, -10, 20, 20);
+                    ctxML.rotate(Math.PI / 4);
+                    ctxML.strokeRect(-10, -10, 20, 20);
+                    ctxML.resetTransform();
                 }
                 tiles[board[m][n]].rPos = calcRPos(board[m][n], tiles[board[m][n]].stacked);
-                displayPos(ctx, tiles[board[m][n]].rPos, m * 40 + 60, n * 40 + 100, 40, 0); //This draws the positions / sides
+                displayPos(ctxML, tiles[board[m][n]].rPos, m * 40 + 60, n * 40 + 100, 40, 0); //This draws the positions / sides
             }
-        }
-    }
-
-    if (selX != -1) { //The moused-over tile
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = col[2];
-        ctx.strokeRect(selX * 40 + 35, selY * 40 + 75, 50, 50);
-        if (board[selX][selY] != -1) {
-            ctx.fillStyle = col[0];
-            ctx.fillRect(520, 120, 80, 80);
-            if (tiles[board[selX][selY]].stacked != -1) {
-                ctx.beginPath();
-                ctx.moveTo(495, 150);
-                ctx.lineTo(505, 160);
-                ctx.lineTo(495, 170);
-                ctx.fill();
-                ctx.fillRect(400, 120, 80, 80);
-                displayPos(ctx, tiles[tiles[board[selX][selY]].stacked].pos, 440, 160, 80, 0);
-                tiles[board[selX][selY]].stacked *= -1;
-                if (hand == -1 && checkCompat(selX, selY, board[selX][selY])) {
-                    displayKey(ctx, "S", 440, 220);
-                }
-                tiles[board[selX][selY]].stacked *= -1;
-            }
-            displayPos(ctx, tiles[board[selX][selY]].pos, 560, 160, 80, 0);
         }
     }
 
     for (let f = 0; f < deckSlots; f++) {
         if (deck[f] != -1) { //Draws the deck
-            ctx.fillStyle = col[0];
-            ctx.fillRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 20, 420, 40, 40);
-            displayPos(ctx, tiles[deck[f]].pos, Math.round((320 / (deckSlots + 1)) * (f + 1)) + 40, 440, 40, 0);
+            ctxML.fillStyle = col[0];
+            ctxML.fillRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 20, 420, 40, 40);
+            displayPos(ctxML, tiles[deck[f]].pos, Math.round((320 / (deckSlots + 1)) * (f + 1)) + 40, 440, 40, 0);
         } else {
-            ctx.fillStyle = "#AFAFAF"; //The deck slot, if empty, is a gray square
-            ctx.fillRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 20, 420, 40, 40);
+            ctxML.fillStyle = "#AFAFAF"; //The deck slot, if empty, is a gray square
+            ctxML.fillRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 20, 420, 40, 40);
         }
     }
 
@@ -801,91 +849,125 @@ function drawGame() { //////////////////////////////////////////////////////////
         for (let n = 0; n < 8; n++) {
             for (let m = 0; m < 8; m++) {
                 if (!checkCompat(m, n, hand)) { //Draws an X on any space where the currently held tile can't be put down
-                    ctx.lineWidth = 2;
-                    ctx.strokeStyle = "#7F7F7F";
-                    ctx.beginPath();
-                    ctx.moveTo(m * 40 + 40, n * 40 + 80);
-                    ctx.lineTo(m * 40 + 80, n * 40 + 120);
-                    ctx.stroke();
-                    ctx.beginPath();
-                    ctx.moveTo(m * 40 + 80, n * 40 + 80);
-                    ctx.lineTo(m * 40 + 40, n * 40 + 120);
-                    ctx.stroke();
+                    ctxML.lineWidth = 2;
+                    ctxML.strokeStyle = "#7F7F7F";
+                    ctxML.beginPath();
+                    ctxML.moveTo(m * 40 + 40, n * 40 + 80);
+                    ctxML.lineTo(m * 40 + 80, n * 40 + 120);
+                    ctxML.stroke();
+                    ctxML.beginPath();
+                    ctxML.moveTo(m * 40 + 80, n * 40 + 80);
+                    ctxML.lineTo(m * 40 + 40, n * 40 + 120);
+                    ctxML.stroke();
                 } else if (checkStackCompat(board[m][n], hand) && tiles[board[m][n]].stacked == -1 && tiles[hand].stacked == -1) {
-                    ctx.lineWidth = 1;
-                    ctx.strokeStyle = col[2];
-                    ctx.strokeRect(m * 40 + 50, n * 40 + 90, 20, 20);
+                    ctxML.lineWidth = 1;
+                    ctxML.strokeStyle = col[2];
+                    ctxML.strokeRect(m * 40 + 50, n * 40 + 90, 20, 20);
                 }
             }
         }
-        ctx.fillStyle = col[0]; //Draws the currently held tile
-        ctx.translate(cursorX, cursorY);
-        ctx.rotate(rAnim);
-        ctx.fillRect(-25, -25, 50, 50);
-        ctx.strokeStyle = col[1];
-        ctx.lineWidth = 1;
-        ctx.strokeRect(-25, -25, 50, 50);
+        ctxML.fillStyle = col[0]; //The "inventory" display
+        ctxML.fillRect(520, 280, 80, 80);
         if (tiles[hand].stacked != -1) {
-            ctx.strokeRect(-12, -12, 24, 24);
-            ctx.rotate(Math.PI / 4);
-            ctx.strokeRect(-12, -12, 24, 24);
+            ctxML.beginPath();
+            ctxML.moveTo(495, 310);
+            ctxML.lineTo(505, 320);
+            ctxML.lineTo(495, 330);
+            ctxML.fill();
+            ctxML.fillRect(400, 280, 80, 80);
+            displayPos(ctxML, tiles[tiles[hand].stacked].pos, 440, 320, 80, 0);
         }
-        ctx.resetTransform();
+        displayPos(ctxML, tiles[hand].pos, 560, 320, 80, 0);
+    }
+}
+
+function drawCursor() {
+    ctxTL.clearRect(0, 0, 640, 480);
+    if (selX != -1) { //The moused-over tile
+        ctxTL.lineWidth = 1;
+        ctxTL.strokeStyle = col[2];
+        ctxTL.strokeRect(selX * 40 + 35, selY * 40 + 75, 50, 50);
+        if (board[selX][selY] != -1) {
+            ctxTL.fillStyle = col[0];
+            ctxTL.fillRect(520, 120, 80, 80);
+            if (tiles[board[selX][selY]].stacked != -1) {
+                ctxTL.beginPath();
+                ctxTL.moveTo(495, 150);
+                ctxTL.lineTo(505, 160);
+                ctxTL.lineTo(495, 170);
+                ctxTL.fill();
+                ctxTL.fillRect(400, 120, 80, 80);
+                displayPos(ctxTL, tiles[tiles[board[selX][selY]].stacked].pos, 440, 160, 80, 0);
+                tiles[board[selX][selY]].stacked *= -1;
+                if (hand == -1 && checkCompat(selX, selY, board[selX][selY])) {
+                    displayKey(ctxTL, "S", 440, 220);
+                }
+                tiles[board[selX][selY]].stacked *= -1;
+            }
+            displayPos(ctxTL, tiles[board[selX][selY]].pos, 560, 160, 80, 0);
+        }
+    }
+
+    if (hand != -1) {
+        ctxTL.fillStyle = col[0]; //Draws the currently held tile
+        ctxTL.translate(cursorX, cursorY);
+        ctxTL.rotate(rAnim);
+        ctxTL.fillRect(-25, -25, 50, 50);
+        ctxTL.strokeStyle = col[1];
+        ctxTL.lineWidth = 1;
+        ctxTL.strokeRect(-25, -25, 50, 50);
+        if (tiles[hand].stacked != -1) {
+            ctxTL.strokeRect(-12, -12, 24, 24);
+            ctxTL.rotate(Math.PI / 4);
+            ctxTL.strokeRect(-12, -12, 24, 24);
+        }
+        ctxTL.resetTransform();
         tiles[hand].rPos = calcRPos(hand, tiles[hand].stacked);
-        displayPos(ctx, tiles[hand].rPos, cursorX, cursorY, 50, rAnim);
+        displayPos(ctxTL, tiles[hand].rPos, cursorX, cursorY, 50, rAnim);
         if (Math.abs(rAnim) < 0.1) {
             rAnim = 0;
         }
         rAnim *= 0.6;
 
-        ctx.fillStyle = col[0]; //The "inventory" display
-        ctx.fillRect(520, 280, 80, 80);
-        if (tiles[hand].stacked != -1) {
-            ctx.beginPath();
-            ctx.moveTo(495, 310);
-            ctx.lineTo(505, 320);
-            ctx.lineTo(495, 330);
-            ctx.fill();
-            ctx.fillRect(400, 280, 80, 80);
-            displayPos(ctx, tiles[tiles[hand].stacked].pos, 440, 320, 80, 0);
-        }
-        displayPos(ctx, tiles[hand].pos, 560, 320, 80, 0);
-
         if (selX != -1 && board[selX][selY] != -1) {
             if (checkStackCompat(board[selX][selY], hand)) { //TR
                 if (checkCompat(selX, selY, hand) && tiles[hand].stacked == -1 && tiles[board[selX][selY]].stacked == -1) {
-                    displayKey(ctx, "S", 585, 240);
+                    displayKey(ctxTL, "S", 585, 240);
                 }
-                displayArrow(ctx, 560, 240, 59, 0);
+                displayArrow(ctxTL, 560, 240, 59, 0);
             }
             if (checkStackCompat(hand, board[selX][selY])) {
-                displayArrow(ctx, 560, 240, 59, Math.PI);
+                displayArrow(ctxTL, 560, 240, 59, Math.PI);
             }
             if (tiles[hand].stacked != -1) { //BL
                 if (checkStackCompat(board[selX][selY], tiles[hand].stacked)) {
-                    displayArrow(ctx, 500, 240, 59, Math.PI / 8);
+                    displayArrow(ctxTL, 500, 240, 59, Math.PI / 8);
                 }
                 if (checkStackCompat(tiles[hand].stacked, board[selX][selY])) {
-                    displayArrow(ctx, 500, 240, 59, Math.PI / 8 * 9);
+                    displayArrow(ctxTL, 500, 240, 59, Math.PI / 8 * 9);
                 }
             }
             if (tiles[board[selX][selY]].stacked != -1) { //TL
                 if (checkStackCompat(tiles[board[selX][selY]].stacked, hand)) {
-                    displayArrow(ctx, 500, 240, 59, Math.PI / 8 * 15);
+                    displayArrow(ctxTL, 500, 240, 59, Math.PI / 8 * 15);
                 }
                 if (checkStackCompat(hand, tiles[board[selX][selY]].stacked)) {
-                    displayArrow(ctx, 500, 240, 59, Math.PI / 8 * 7);
+                    displayArrow(ctxTL, 500, 240, 59, Math.PI / 8 * 7);
                 }
                 if (tiles[hand].stacked != -1) { //BL and TL
                     if (checkStackCompat(tiles[board[selX][selY]].stacked, tiles[hand].stacked)) {
-                        displayArrow(ctx, 440, 240, 59, 0);
+                        displayArrow(ctxTL, 440, 240, 59, 0);
                     }
                     if (checkStackCompat(tiles[hand].stacked, tiles[board[selX][selY]].stacked)) {
-                        displayArrow(ctx, 440, 240, 59, Math.PI);
+                        displayArrow(ctxTL, 440, 240, 59, Math.PI);
                     }
                 }
             }
         }
+    }
+
+    if (gameState == "game") {
+        requestAnimationFrame(drawCursor);
     }
 }
 
