@@ -167,7 +167,7 @@ function calcRPos(t1, t2) { //t1 is stacked onto, t2 is on top
     if (Math.sign(t1) == -1 || Math.sign(t2) == -1) {
         return Math.sign(t1) == -1 ? tiles[t2].pos : tiles[t1].pos;
     }
-    for (f = 0; f < 20; f++) {
+    for (let f = 0; f < 20; f++) {
         result[f] = tiles[t2].pos[f] || tiles[t1].pos[f];
     }
     return result; //returns what the positions would be if t2 were stacked on top of t1
@@ -300,6 +300,51 @@ function refreshDeck() {
     }
 }
 
+function rotateCW() {
+    for (let f = (weirdRot == 1 ? 4 : 0); f < 5; f++) {
+        tiles[hand].pos.unshift(tiles[hand].pos.pop());
+    }
+    if (weirdRot == 0) {
+        rAnim -= Math.PI / 2;
+    }
+    if (tiles[hand].stacked != -1) {
+        for (let f = (weirdRot == 1 ? 4 : 0); f < 5; f++) {
+            tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos.pop());
+        }
+    }
+}
+
+function rotateCCW() {
+    for (let f = (weirdRot == 1 ? 4 : 0); f < 5; f++) {
+        tiles[hand].pos.push(tiles[hand].pos.shift());
+    }
+    if (weirdRot == 0) {
+        rAnim += Math.PI / 2;
+    }
+    if (tiles[hand].stacked != -1) {
+        for (let f = (weirdRot == 1 ? 4 : 0); f < 5; f++) {
+            tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
+        }
+    }
+}
+
+function stack() {
+    if (checkStackCompat(board[selX][selY], hand) && checkCompat(selX, selY, hand)) {
+        tiles[board[selX][selY]].stacked = hand;
+        hand = -1;
+        refreshDeck(); //refresh the deck if it needs it upon stacking a tile successfully
+    }
+}
+
+function unstack() {
+    hand = tiles[board[selX][selY]].stacked;
+    tiles[board[selX][selY]].stacked = -1;
+    if (!checkCompat(selX, selY, board[selX][selY])) {
+        tiles[board[selX][selY]].stacked = hand;
+        hand = -1;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 function displayPos(c, t, x, y, s, r) { //parameters are Canvas, Tile (an array of its 20 positions), X and Y coordinates, Size, and Rotation
@@ -385,77 +430,20 @@ document.addEventListener('keydown', (event) => { //Key presses, for rotating an
     const keyName = event.key.toLowerCase();
     if (gameState == "game") {
         if (keyName === 'a' && hand != -1) {
-            if (weirdRot == 1){
-                tiles[hand].pos.push(tiles[hand].pos.shift());
-                tiles[hand].pos.length = 20;
-            } else if (allowRot == 1){
-                tiles[hand].pos.push(tiles[hand].pos.shift());
-                tiles[hand].pos.push(tiles[hand].pos.shift());
-                tiles[hand].pos.push(tiles[hand].pos.shift());
-                tiles[hand].pos.push(tiles[hand].pos.shift());
-                tiles[hand].pos.push(tiles[hand].pos.shift());
-                tiles[hand].pos.length = 20;
-                rAnim += Math.PI / 2;
-            }
-            if (tiles[hand].stacked != -1) {
-                if (weirdRot == 1) {
-                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
-                    tiles[tiles[hand].stacked].pos.length = 20;
-                } else if (allowRot == 1) {
-                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
-                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
-                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
-                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
-                    tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
-                    tiles[tiles[hand].stacked].pos.length = 20;
-                }
-            }
+            rotateCCW();
             drawTiles();
         }
 
         if (keyName === 'd' && hand != -1) {
-            if (weirdRot == 1){
-                tiles[hand].pos.unshift(tiles[hand].pos[19]);
-                tiles[hand].pos.length = 20;
-            } else if (allowRot == 1){
-                tiles[hand].pos.unshift(tiles[hand].pos[19]);
-                tiles[hand].pos.unshift(tiles[hand].pos[19]);
-                tiles[hand].pos.unshift(tiles[hand].pos[19]);
-                tiles[hand].pos.unshift(tiles[hand].pos[19]);
-                tiles[hand].pos.unshift(tiles[hand].pos[19]);
-                tiles[hand].pos.length = 20;
-                rAnim -= Math.PI / 2;
-            }
-            if (tiles[hand].stacked != -1) {
-                if (weirdRot == 1) {
-                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
-                    tiles[tiles[hand].stacked].pos.length = 20;
-                } else if (allowRot == 1) {
-                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
-                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
-                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
-                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
-                    tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos[19]);
-                    tiles[tiles[hand].stacked].pos.length = 20;
-                }
-            }
+            rotateCW();
             drawTiles();
         }
 
         if (keyName === 's') {
             if (tiles[board[selX][selY]].stacked == -1 && hand != -1 && tiles[hand].stacked == -1) {
-                if (checkStackCompat(board[selX][selY], hand) && checkCompat(selX, selY, hand)) {
-                    tiles[board[selX][selY]].stacked = hand;
-                    hand = -1;
-                    refreshDeck(); //refresh the deck if it needs it upon stacking a tile successfully
-                }
+                stack();
             } else if (tiles[board[selX][selY]].stacked != -1 && hand == -1) {
-                hand = tiles[board[selX][selY]].stacked;
-                tiles[board[selX][selY]].stacked = -1;
-                if (!checkCompat(selX, selY, board[selX][selY])) {
-                    tiles[board[selX][selY]].stacked = hand;
-                    hand = -1;
-                }
+                unstack();
             }
             drawTiles();
         }
