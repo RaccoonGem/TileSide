@@ -688,10 +688,10 @@ function drawMenuC() { /////////////////////////////////////////////////////////
         }
         timer = 0;
     }
-    for (let f = 0; f < deckSlots; f++) { //Draws the deck of sample tiles
+    for (let f = 0; f < tiles.length; f++) { //Draws the deck of sample tiles
         ctx.strokeStyle = col[1];
-        ctx.strokeRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 39 - (tileSize / 2), 439 - (tileSize / 2), tileSize + 2, tileSize + 2);
-        displayPos(ctx, tiles[f].pos, Math.round((320 / (deckSlots + 1)) * (f + 1)) + 40, 440, tileSize, 0);
+        ctx.strokeRect(Math.round((320 / (tiles.length + 1)) * (f + 1)) + 39 - (tileSize / 2), 439 - (tileSize / 2), tileSize + 2, tileSize + 2);
+        displayPos(ctx, tiles[f].pos, Math.round((320 / (tiles.length + 1)) * (f + 1)) + 40, 440, tileSize, 0);
     }
 
     if (gameState == "menuC") {
