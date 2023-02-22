@@ -23,6 +23,12 @@ let weirdRot = 0;
 
 let asymSides = 0;
 let colN = 4; //The number of colors for tile sides to choose from
+let posN = 5;
+let boardSize = 320;
+let posSize = 8;
+let tileSize = 40;
+let bOriginX = 40 + ((320 - boardSize) / 2);
+let bOriginY = 80 + ((320 - boardSize) / 2);
 
 let deckSlots = 3;
 let deckBehavior = 0; //0: no slots refresh until all empty. 1: empty slot refreshes. 2: all slots refresh.
@@ -32,6 +38,7 @@ col = ["#FFFFFF", "#3F3F3F", "#000000", "#FF0000", "#00BF00", "#0000FF", "#FFDF0
 let colScheme = 0;
 let colSchemeName = ["Default", "Graph Paper", "Geothermal"];
 
+let boardN = 8;
 let board = [
     [,,,,,,,],
     [,,,,,,,],
@@ -46,90 +53,42 @@ let board = [
 let tiles = []; //The array which stores each tile that is created
 
 function Tile () { //Constructor for tiles. The parameters are what color each side will be, and then the 12 positions are randomized
-    this.pos = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]; //A position being "0" means it's blank
+    this.pos = []; //A position being "0" means it's blank
+    for (let  f = 0; f < posN * 4; f++) {
+        this.pos.push(0);
+    }
     this.stacked = -1; //The tile stacked on top of this one. -1 means no tile
-    let north = Math.ceil(Math.random() * colN) + 1;
-    let east = Math.ceil(Math.random() * colN) + 1;
-    let south = Math.ceil(Math.random() * colN) + 1;
-    let west = Math.ceil(Math.random() * colN) + 1;
+    let sideCol = [];
+    for (let f = 0; f < 4; f++) {
+        sideCol.push(Math.ceil(Math.random() * colN) + 1);
+    }
+    
     if (asymSides == 0) {
-        while (this.pos[0] + this.pos[1] + this.pos[2] == 0) {
-            this.pos[0] = Math.round(Math.random()) * north;
-            this.pos[1] = Math.round(Math.random()) * north;
-            this.pos[2] = Math.round(Math.random()) * north;
-            this.pos[3] = this.pos[1];
-            this.pos[4] = this.pos[0];
-        }
-        while (this.pos[5] + this.pos[6] + this.pos[7] == 0) {
-            this.pos[5] = Math.round(Math.random()) * east;
-            this.pos[6] = Math.round(Math.random()) * east;
-            this.pos[7] = Math.round(Math.random()) * east;
-            if (this.pos[4] != 0 && this.pos[4] != this.pos[5]) {
-                this.pos[5] = 0;
+        for (let f = 0; f < 4; f++) {
+            while (this.pos.slice(f * posN, (f + 1) * posN).every(p => p == 0)) {
+                for (let g = 0; g < posN; g++) {
+                    this.pos[g + (f * posN)] = ((g < posN / 2) ? (Math.round(Math.random()) * sideCol[f]) : (this.pos[(posN - g - 1) + (f * posN)]));
+                }
+                if (((this.pos.at(f * posN - 1) && this.pos[f * posN]) && (this.pos.at(f * posN - 1) != this.pos[f * posN]))
+                || ((this.pos[((f + 1) * posN) % (posN * 4)] && this.pos[(f + 1) * posN - 1]) && (this.pos[((f + 1) * posN) % (posN * 4)] != this.pos[(f + 1) * posN - 1]))) {
+                    this.pos[f * posN] = 0;
+                    this.pos[(f + 1) * posN - 1] = 0;
+                }
             }
-            this.pos[8] = this.pos[6];
-            this.pos[9] = this.pos[5];
-        }
-        while (this.pos[10] + this.pos[11] + this.pos[12] == 0) {
-            this.pos[10] = Math.round(Math.random()) * south;
-            this.pos[11] = Math.round(Math.random()) * south;
-            this.pos[12] = Math.round(Math.random()) * south;
-            if (this.pos[9] != 0 && this.pos[9] != this.pos[10]) {
-                this.pos[10] = 0;
-            }
-            this.pos[13] = this.pos[11];
-            this.pos[14] = this.pos[10];
-        }
-        while (this.pos[15] + this.pos[16] + this.pos[17] == 0) {
-            this.pos[15] = Math.round(Math.random()) * west;
-            this.pos[16] = Math.round(Math.random()) * west;
-            this.pos[17] = Math.round(Math.random()) * west;
-            if (this.pos[14] + this.pos[0] != 0 && (this.pos[14] != this.pos[15] || this.pos[0] != this.pos[15])) {
-                this.pos[15] = 0;
-            }
-            this.pos[18] = this.pos[16];
-            this.pos[19] = this.pos[15];
         }
     }
     else {
-        while (this.pos[0] + this.pos[1] + this.pos[2] + this.pos[3] + this.pos[4] == 0) {
-            this.pos[0] = Math.round(Math.random()) * north;
-            this.pos[1] = Math.round(Math.random()) * north;
-            this.pos[2] = Math.round(Math.random()) * north;
-            this.pos[3] = Math.round(Math.random()) * north;
-            this.pos[4] = Math.round(Math.random()) * north;
-        }
-        while (this.pos[5] + this.pos[6] + this.pos[7] + this.pos[8] + this.pos[9] == 0) {
-            this.pos[5] = Math.round(Math.random()) * east;
-            this.pos[6] = Math.round(Math.random()) * east;
-            this.pos[7] = Math.round(Math.random()) * east;
-            this.pos[8] = Math.round(Math.random()) * east;
-            this.pos[9] = Math.round(Math.random()) * east;
-            if (this.pos[4] != 0 && this.pos[4] != this.pos[5]) {
-                this.pos[5] = 0;
-            }
-        }
-        while (this.pos[10] + this.pos[11] + this.pos[12] + this.pos[13] + this.pos[14] == 0) {
-            this.pos[10] = Math.round(Math.random()) * south;
-            this.pos[11] = Math.round(Math.random()) * south;
-            this.pos[12] = Math.round(Math.random()) * south;
-            this.pos[13] = Math.round(Math.random()) * south;
-            this.pos[14] = Math.round(Math.random()) * south;
-            if (this.pos[9] != 0 && this.pos[9] != this.pos[10]) {
-                this.pos[10] = 0;
-            }
-        }
-        while (this.pos[15] + this.pos[16] + this.pos[17] + this.pos[18] + this.pos[19] == 0) {
-            this.pos[15] = Math.round(Math.random()) * west;
-            this.pos[16] = Math.round(Math.random()) * west;
-            this.pos[17] = Math.round(Math.random()) * west;
-            this.pos[18] = Math.round(Math.random()) * west;
-            this.pos[19] = Math.round(Math.random()) * west;
-            if (this.pos[14] != 0 && this.pos[14] != this.pos[15]) {
-                this.pos[15] = 0;
-            }
-            if (this.pos[0] != 0 && this.pos[0] != this.pos[19]) {
-                this.pos[19] = 0;
+        for (let f = 0; f < 4; f++) {
+            while (this.pos.slice(f * posN, (f + 1) * posN).every(p => p == 0)) {
+                for (let g = 0; g < posN; g++) {
+                    this.pos[g + (f * posN)] = Math.round(Math.random()) * sideCol[f];
+                }
+                if ((this.pos.at(f * posN - 1) && this.pos[f * posN]) && (this.pos.at(f * posN - 1) != this.pos[f * posN])) {
+                    this.pos[f * posN] = 0;
+                }
+                if ((this.pos[((f + 1) * posN) % (posN * 4)] && this.pos[(f + 1) * posN - 1]) && (this.pos[((f + 1) * posN) % (posN * 4)] != this.pos[(f + 1) * posN - 1])) {
+                    this.pos[(f + 1) * posN - 1] = 0;
+                }
             }
         }
     }
@@ -142,6 +101,8 @@ function ruleInit() {
 
     asymSides = 0;
     colN = 4;
+    posN = 5;
+    evalSizes();
 
     deckSlots = 3;
     deckBehavior = 1;
@@ -164,28 +125,28 @@ function newGame() {
 
 function calcRPos(t1, t2) { //t1 is stacked onto, t2 is on top
     let result = [];
-    result.length = 20;
+    result.length = posN * 4;
     if (Math.sign(t1) == -1 || Math.sign(t2) == -1) {
         return Math.sign(t1) == -1 ? tiles[t2].pos : tiles[t1].pos;
     }
-    for (let f = 0; f < 20; f++) {
+    for (let f = 0; f < posN * 4; f++) {
         result[f] = tiles[t2].pos[f] || tiles[t1].pos[f];
     }
     return result; //returns what the positions would be if t2 were stacked on top of t1
 }
 
 function match(p) {
-    return (p + 14 - (2 * (p % 5))) % 20;
+    return (p + (3 * posN - 1) - (2 * (p % posN))) % (posN * 4);
 }
 
 function checkSide(t1, t2, s) { //t1 and t2 are the numbers of the two tiles being checked against each other
-    s *= 5; //s is passed in as either 0, 1, 2, or 3, depending on the side of t1 being checked against (0 is the top, goes around clockwise)
+    s *= posN; //s is passed in as either 0, 1, 2, or 3, depending on the side of t1 being checked against (0 is the top, goes around clockwise)
     let scoreToAdd = 0; //If the two tiles are deemed compatible, scr will be returned as the point value of their union
     if (t1 == -1 || t2 == -1) {
         return 0; //If either t1 or t2 is actually -1, meaning it's no tile at all, simply return 0
     }
     let uT = Math.sign(tiles[t1].stacked) != -1 ? tiles[t1].rPos : tiles[t1].pos;
-    for (let S = s; S < s + 5; S++) {
+    for (let S = s; S < s + posN; S++) {
         if (uT[S] * tiles[t2].rPos[match(S)] != 0) {
             if (uT[S] != tiles[t2].rPos[match(S)]) {
                 return -1; //If they are not compatible, -1 will be returned instead.
@@ -227,11 +188,11 @@ function checkStackCompat (t1, t2) { //checks whether or not t2 can be stacked o
     }
 
     let rT = calcRPos(t1, t2);
-    for (let f = 0; f < 20; f++) {
-        if (rT[f] * rT[(f + 19) % 20] != 0 && rT[f] != rT[(f + 19) % 20]) {
+    for (let f = 0; f < posN * 4; f++) {
+        if (rT[f] * rT.at(f - 1) != 0 && rT[f] != rT.at(f - 1)) {
             return false;
         }
-        if (rT[f] * rT[(f + 1) % 20] != 0 && rT[f] != rT[(f + 1) % 20]) {
+        if (rT[f] * rT[(f + 1) % (posN * 4)] != 0 && rT[f] != rT[(f + 1) % (posN * 4)]) {
             return false;
         }
     }
@@ -288,15 +249,23 @@ function refreshDeck() {
     }
 }
 
+function evalSizes() {
+    posSize = Math.floor(336 / (boardN * posN));
+    tileSize = posSize * posN;
+    boardSize = tileSize * boardN;
+    bOriginX = 40 + ((320 - boardSize) / 2);
+    bOriginY = 80 + ((320 - boardSize) / 2);
+}
+
 function rotateCW() {
-    for (let f = (weirdRot == 1 ? 4 : 0); f < 5; f++) {
+    for (let f = (weirdRot == 1 ? (posN - 1) : 0); f < posN; f++) {
         tiles[hand].pos.unshift(tiles[hand].pos.pop());
     }
     if (weirdRot == 0) {
         rAnim -= Math.PI / 2;
     }
     if (tiles[hand].stacked != -1) {
-        for (let f = (weirdRot == 1 ? 4 : 0); f < 5; f++) {
+        for (let f = (weirdRot == 1 ? (posN - 1) : 0); f < posN; f++) {
             tiles[tiles[hand].stacked].pos.unshift(tiles[tiles[hand].stacked].pos.pop());
         }
         tiles[hand].rPos = calcRPos(hand, tiles[hand].stacked);
@@ -304,14 +273,14 @@ function rotateCW() {
 }
 
 function rotateCCW() {
-    for (let f = (weirdRot == 1 ? 4 : 0); f < 5; f++) {
+    for (let f = (weirdRot == 1 ? (posN - 1) : 0); f < posN; f++) {
         tiles[hand].pos.push(tiles[hand].pos.shift());
     }
     if (weirdRot == 0) {
         rAnim += Math.PI / 2;
     }
     if (tiles[hand].stacked != -1) {
-        for (let f = (weirdRot == 1 ? 4 : 0); f < 5; f++) {
+        for (let f = (weirdRot == 1 ? (posN - 1) : 0); f < posN; f++) {
             tiles[tiles[hand].stacked].pos.push(tiles[tiles[hand].stacked].pos.shift());
         }
         tiles[hand].rPos = calcRPos(hand, tiles[hand].stacked);
@@ -343,48 +312,40 @@ function unstack() {
 function displayPos(c, t, x, y, s, r) { //parameters are Canvas, Tile (an array of its 20 positions), X and Y coordinates, Size, and Rotation
     c.resetTransform();
     c.translate(x, y);
-    c.scale(s / 10, s / 10);
+    c.scale(s / (posN * 2), s / (posN * 2));
     c.rotate(r);
-    for (let p = 0; p < 20; p++) {
+    for (let p = 0; p < (posN * 4); p++) {
         if (t[p] == 0) {
-            if (p % 5 == 4) {
+            if (p % posN == posN - 1) {
                 c.rotate(Math.PI / 2);
             }
             continue;
         }
         c.fillStyle = col[t[p]];
-        switch (p % 5) {
+        switch (p % posN) {
             case 0:
-                if (t[(p + 19) % 20] == t[p]) {
-                    c.fillRect(-5, -5, 2, 2);
+                if (t.at(p - 1) == t[p]) {
+                    c.fillRect(-posN, -posN, 2, 2);
                 } else {
                     c.beginPath();
-                    c.moveTo(-5, -5);
-                    c.lineTo(-3, -5);
-                    c.lineTo(-3, -3);
+                    c.moveTo(-posN, -posN);
+                    c.lineTo(-posN + 2, -posN);
+                    c.lineTo(-posN + 2, -posN + 2);
                     c.fill();
                 }
                 break;
-            case 1:
-                c.fillRect(-3, -5, 2, 2);
-                break;
-            case 2:
-                c.fillRect(-1, -5, 2, 2);
-                break;
-            case 3:
-                c.fillRect(1, -5, 2, 2);
-                break;
-            case 4:
-                if (t[(p + 1) % 20] != t[p]) {
+            case (posN - 1):
+                if (t[(p + 1) % (posN * 4)] != t[p]) {
                     c.beginPath();
-                    c.moveTo(3, -5);
-                    c.lineTo(5, -5);
-                    c.lineTo(3, -3);
+                    c.moveTo(posN - 2, -posN);
+                    c.lineTo(posN, -posN);
+                    c.lineTo(posN - 2, -posN + 2);
                     c.fill();
                 }
                 c.rotate(Math.PI / 2);
                 break;
             default:
+                c.fillRect(-posN + ((p % posN) * 2), -posN, 2, 2);
         }
     }
     c.resetTransform();
@@ -445,8 +406,8 @@ document.addEventListener('keydown', (event) => { //Key presses, for rotating an
 canvasTL.addEventListener('mousemove', (event) => { //tracks mouse movement, does the math for what's selected
     cursorX = event.offsetX;
     cursorY = event.offsetY;
-    selX = Math.round((cursorX - 60) / 40);
-    selY = Math.round((cursorY - 100) / 40);
+    selX = (gameState == "menuC" ? Math.floor((cursorX - 40) / 40) : Math.floor((cursorX - bOriginX) / tileSize));
+    selY = (gameState == "menuC" ? Math.floor((cursorY - 80) / 40) : Math.floor((cursorY - bOriginY) / tileSize));
     if (selX < 0 || selX >= 8 || selY < 0 || selY >= 8) {
         selX = -1;
         selY = -1;
@@ -463,7 +424,7 @@ canvasTL.addEventListener('click', (event) => {
         }
         
         for (let f = 0; f < deckSlots; f++) { // the deck
-            if (pointInArea(cursorX, cursorY, Math.round((320 / (deckSlots + 1)) * (f + 1)) + 20, 420, 40, 40)) {
+            if (pointInArea(cursorX, cursorY, Math.round((320 / (deckSlots + 1)) * (f + 1)) + (tileSize / 2), 420, tileSize, tileSize)) {
                 if (hand == -1) {
                     hand = deck[f];
                     deck[f] = -1;
@@ -522,9 +483,13 @@ canvasTL.addEventListener('click', (event) => {
         }
 
         if (selX == 2 && selY == 0) {
-            asymSides = 1 - asymSides;
+            posN = ((posN - 2) % 6) + 3;
+            evalSizes();
         }
         if (selX == 2 && selY == 1) {
+            asymSides = 1 - asymSides;
+        }
+        if (selX == 2 && selY == 2) {
             colN = (colN % (col.length - 2)) + 1;
         }
 
@@ -660,6 +625,9 @@ function drawMenuC() { /////////////////////////////////////////////////////////
     weirdRot == 1 ? ctx.fill() : ctx.stroke();
     ctx.beginPath();
     ctx.arc(140, 100, 15, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(140, 140, 15, 0, Math.PI * 2);
     asymSides == 1 ? ctx.fill() : ctx.stroke();
     ctx.beginPath();
     ctx.arc(220, 100, 15, 0, Math.PI * 2);
@@ -671,8 +639,8 @@ function drawMenuC() { /////////////////////////////////////////////////////////
     for (let f = 0; f < colN; f++) {
         ctx.fillStyle = col[f + 2];
         ctx.beginPath();
-        ctx.moveTo(140, 140);
-        ctx.arc(140, 140, 15, ((f / colN) - (1 / 4)) * Math.PI * 2, (((f + 1) / colN) - (1 / 4)) * Math.PI * 2);
+        ctx.moveTo(140, 180);
+        ctx.arc(140, 180, 15, ((f / colN) - (1 / 4)) * Math.PI * 2, (((f + 1) / colN) - (1 / 4)) * Math.PI * 2);
         ctx.fill();
     }
 
@@ -692,10 +660,14 @@ function drawMenuC() { /////////////////////////////////////////////////////////
         ctx.fillText(weirdRot == 1 ? "On" : "Off", 500, 150);
     }
     if (selX == 2 && selY == 0) {
+        ctx.fillText("Positions per Side", 500, 110);
+        ctx.fillText(posN, 500, 150);
+    }
+    if (selX == 2 && selY == 1) {
         ctx.fillText("Asymmetrical Sides", 500, 110);
         ctx.fillText(asymSides == 1 ? "On" : "Off", 500, 150);
     }
-    if (selX == 2 && selY == 1) {
+    if (selX == 2 && selY == 2) {
         ctx.fillText("Colors", 500, 110);
         ctx.fillText(colN, 500, 150);
     }
@@ -716,9 +688,10 @@ function drawMenuC() { /////////////////////////////////////////////////////////
         }
         timer = 0;
     }
-    for (let f = 0; f < tiles.length; f++) {
-        ctx.strokeRect(Math.round((320 / (tiles.length + 1)) * (f + 1)) + 20, 420, 40, 40);
-        displayPos(ctx, tiles[f].pos, Math.round((320 / (tiles.length + 1)) * (f + 1)) + 40, 440, 40, 0);
+    for (let f = 0; f < deckSlots; f++) { //Draws the deck of sample tiles
+        ctx.strokeStyle = col[1];
+        ctx.strokeRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 39 - (tileSize / 2), 439 - (tileSize / 2), tileSize + 2, tileSize + 2);
+        displayPos(ctx, tiles[f].pos, Math.round((320 / (deckSlots + 1)) * (f + 1)) + 40, 440, tileSize, 0);
     }
 
     if (gameState == "menuC") {
@@ -761,16 +734,16 @@ function drawBG() { ////////////////////////////////////////////////////////////
     ctxBG.font = "32px monospace";
     ctxBG.fillText("Menu", 570, 450);
 
-    ctxBG.strokeRect(40, 80, 320, 320);
+    ctxBG.strokeRect(bOriginX, bOriginY, boardSize, boardSize);
     ctxBG.lineWidth = 1;
-    for (let f = 0; f < 7; f++) { //draws a grid
+    for (let f = 0; f < boardN - 1; f++) { //draws a grid
         ctxBG.beginPath();
-        ctxBG.moveTo((40 * f) + 80, 80);
-        ctxBG.lineTo((40 * f) + 80, 400);
+        ctxBG.moveTo(bOriginX + ((f + 1) * tileSize), bOriginY);
+        ctxBG.lineTo(bOriginX + ((f + 1) * tileSize), bOriginY + boardSize);
         ctxBG.stroke();
         ctxBG.beginPath();
-        ctxBG.moveTo(40, (40 * f) + 120);
-        ctxBG.lineTo(360, (40 * f) + 120);
+        ctxBG.moveTo(bOriginX, bOriginY + ((f + 1) * tileSize));
+        ctxBG.lineTo(bOriginX + boardSize, bOriginY + ((f + 1) * tileSize));
         ctxBG.stroke();
     }
 }
@@ -785,12 +758,12 @@ function drawTiles() { /////////////////////////////////////////////////////////
     ctxML.font = "16px monospace";
     ctxML.textAlign = "left";
     calcScore();
-    ctxML.fillText("Score: " + score, 40, 72); //Draws the score
+    ctxML.fillText("Score: " + score, bOriginX, bOriginY - 8); //Draws the score
 
     for (let n = 0; n < 8; n++) {
         for (let m = 0; m < 8; m++) {
             if (board[m][n] != -1) {
-                ctxML.fillRect(m * 40 + 38, n * 40 + 78, 44, 44); //Puts a kind of outline/shadow behind all tiles on the board
+                ctxML.fillRect(m * tileSize + bOriginX - 2, n * tileSize + bOriginY - 2, tileSize + 4, tileSize + 4); //Puts a kind of outline/shadow behind all tiles on the board
             }
         }
     }
@@ -799,17 +772,17 @@ function drawTiles() { /////////////////////////////////////////////////////////
         for (let m = 0; m < 8; m++) {
             if (board[m][n] != -1) {
                 ctxML.fillStyle = col[0];
-                ctxML.fillRect(m * 40 + 40, n * 40 + 80, 40, 40); //This draws the white part of a tile
+                ctxML.fillRect(m * tileSize + bOriginX, n * tileSize + bOriginY, tileSize, tileSize); //This draws the white part of a tile
                 if (tiles[board[m][n]].stacked != -1) {
-                    ctxML.translate(m * 40 + 60, n * 40 + 100);
+                    ctxML.translate((m + 0.5) * tileSize + bOriginX, (n + 0.5) * tileSize + bOriginY);
                     ctxML.strokeStyle = col[1];
                     ctxML.lineWidth = 1;
-                    ctxML.strokeRect(-10, -10, 20, 20);
+                    ctxML.strokeRect(-tileSize / 4, -tileSize / 4, tileSize / 2, tileSize / 2);
                     ctxML.rotate(Math.PI / 4);
-                    ctxML.strokeRect(-10, -10, 20, 20);
+                    ctxML.strokeRect(-tileSize / 4, -tileSize / 4, tileSize / 2, tileSize / 2);
                     ctxML.resetTransform();
                 }
-                displayPos(ctxML, tiles[board[m][n]].rPos, m * 40 + 60, n * 40 + 100, 40, 0); //This draws the positions / sides
+                displayPos(ctxML, tiles[board[m][n]].rPos, (m + 0.5) * tileSize + bOriginX, (n + 0.5) * tileSize + bOriginY, tileSize, 0); //This draws the positions / sides
             }
         }
     }
@@ -817,11 +790,11 @@ function drawTiles() { /////////////////////////////////////////////////////////
     for (let f = 0; f < deckSlots; f++) {
         if (deck[f] != -1) { //Draws the deck
             ctxML.strokeStyle = col[1];
-            ctxML.strokeRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 20, 420, 40, 40);
-            displayPos(ctxML, tiles[deck[f]].pos, Math.round((320 / (deckSlots + 1)) * (f + 1)) + 40, 440, 40, 0);
+            ctxML.strokeRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 39 - (tileSize / 2), 439 - (tileSize / 2), tileSize + 2, tileSize + 2);
+            displayPos(ctxML, tiles[deck[f]].pos, Math.round((320 / (deckSlots + 1)) * (f + 1)) + 40, 440, tileSize, 0);
         } else {
             ctxML.fillStyle = col[1]; //The deck slot, if empty, is a gray square
-            ctxML.fillRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 20, 420, 40, 40);
+            ctxML.fillRect(Math.round((320 / (deckSlots + 1)) * (f + 1)) + 40 - (tileSize / 2), 440 - (tileSize / 2), tileSize, tileSize);
         }
     }
 
@@ -832,32 +805,32 @@ function drawTiles() { /////////////////////////////////////////////////////////
                     ctxML.lineWidth = 2;
                     ctxML.strokeStyle = col[1];
                     ctxML.beginPath();
-                    ctxML.moveTo(m * 40 + 40, n * 40 + 80);
-                    ctxML.lineTo(m * 40 + 80, n * 40 + 120);
+                    ctxML.moveTo(m * tileSize + bOriginX, n * tileSize + bOriginY);
+                    ctxML.lineTo((m + 1) * tileSize + bOriginX, (n + 1) * tileSize + bOriginY);
                     ctxML.stroke();
                     ctxML.beginPath();
-                    ctxML.moveTo(m * 40 + 80, n * 40 + 80);
-                    ctxML.lineTo(m * 40 + 40, n * 40 + 120);
+                    ctxML.moveTo((m + 1) * tileSize + bOriginX, n * tileSize + bOriginY);
+                    ctxML.lineTo(m * tileSize + bOriginX, (n + 1) * tileSize + bOriginY);
                     ctxML.stroke();
                 } else if (checkStackCompat(board[m][n], hand) && tiles[board[m][n]].stacked == -1 && tiles[hand].stacked == -1) {
                     ctxML.lineWidth = 1;
                     ctxML.strokeStyle = col[2];
-                    ctxML.strokeRect(m * 40 + 50, n * 40 + 90, 20, 20);
+                    ctxML.strokeRect((m + 0.25) * tileSize + bOriginX, (n + 0.25) * tileSize + bOriginY, tileSize / 2, tileSize / 2);
                 }
             }
         }
 
-        ctxML.strokeRect(520, 280, 80, 80); //The "inventory" display
+        ctxML.strokeRect(560 - tileSize, 320 - tileSize, tileSize * 2, tileSize * 2); //The "inventory" display
         if (tiles[hand].stacked != -1) {
             ctxML.beginPath();
             ctxML.moveTo(495, 310);
             ctxML.lineTo(505, 320);
             ctxML.lineTo(495, 330);
             ctxML.stroke();
-            ctxML.strokeRect(400, 280, 80, 80);
-            displayPos(ctxML, tiles[tiles[hand].stacked].pos, 440, 320, 80, 0);
+            ctxML.strokeRect(440 - tileSize, 320 - tileSize, tileSize * 2, tileSize * 2);
+            displayPos(ctxML, tiles[tiles[hand].stacked].pos, 440, 320, tileSize * 2, 0);
         }
-        displayPos(ctxML, tiles[hand].pos, 560, 320, 80, 0);
+        displayPos(ctxML, tiles[hand].pos, 560, 320, tileSize * 2, 0);
     }
 }
 
@@ -866,25 +839,25 @@ function drawCursor() {
     if (selX != -1) { //The moused-over tile
         ctxTL.lineWidth = 1;
         ctxTL.strokeStyle = col[2];
-        ctxTL.strokeRect(selX * 40 + 35, selY * 40 + 75, 50, 50);
+        ctxTL.strokeRect(selX * tileSize + bOriginX - 5, selY * tileSize + bOriginY - 5, tileSize + 10, tileSize + 10);
         if (board[selX][selY] != -1) {
             ctxTL.strokeStyle = col[1];
-            ctxTL.strokeRect(520, 120, 80, 80);
+            ctxTL.strokeRect(560 - tileSize, 160 - tileSize, tileSize * 2, tileSize * 2);
             if (tiles[board[selX][selY]].stacked != -1) {
                 ctxTL.beginPath();
                 ctxTL.moveTo(495, 150);
                 ctxTL.lineTo(505, 160);
                 ctxTL.lineTo(495, 170);
                 ctxTL.stroke();
-                ctxTL.strokeRect(400, 120, 80, 80);
-                displayPos(ctxTL, tiles[tiles[board[selX][selY]].stacked].pos, 440, 160, 80, 0);
+                ctxTL.strokeRect(440 - tileSize, 160 - tileSize, tileSize * 2, tileSize * 2);
+                displayPos(ctxTL, tiles[tiles[board[selX][selY]].stacked].pos, 440, 160, tileSize * 2, 0);
                 tiles[board[selX][selY]].stacked *= -1;
                 if (hand == -1 && checkCompat(selX, selY, board[selX][selY])) {
                     displayKey(ctxTL, "S", 440, 220);
                 }
                 tiles[board[selX][selY]].stacked *= -1;
             }
-            displayPos(ctxTL, tiles[board[selX][selY]].pos, 560, 160, 80, 0);
+            displayPos(ctxTL, tiles[board[selX][selY]].pos, 560, 160, tileSize * 2, 0);
         }
     }
 
@@ -892,17 +865,18 @@ function drawCursor() {
         ctxTL.fillStyle = col[0]; //Draws the currently held tile
         ctxTL.translate(cursorX, cursorY);
         ctxTL.rotate(rAnim);
-        ctxTL.fillRect(-25, -25, 50, 50);
+        ctxTL.fillRect((-tileSize / 2) - posN, (-tileSize / 2) - posN, tileSize + (posN * 2), tileSize + (posN * 2));
         ctxTL.strokeStyle = col[1];
         ctxTL.lineWidth = 1;
-        ctxTL.strokeRect(-25, -25, 50, 50);
+        ctxTL.strokeRect((-tileSize / 2) - posN - 1, (-tileSize / 2) - posN - 1, tileSize + (posN * 2) + 2, tileSize + (posN * 2) + 2);
         if (tiles[hand].stacked != -1) {
-            ctxTL.strokeRect(-12, -12, 24, 24);
+            ctxTL.scale(0.5, 0.5);
+            ctxTL.strokeRect((-tileSize / 2) - posN, (-tileSize / 2) - posN, tileSize + (posN * 2), tileSize + (posN * 2));
             ctxTL.rotate(Math.PI / 4);
-            ctxTL.strokeRect(-12, -12, 24, 24);
+            ctxTL.strokeRect((-tileSize / 2) - posN, (-tileSize / 2) - posN, tileSize + (posN * 2), tileSize + (posN * 2));
         }
         ctxTL.resetTransform();
-        displayPos(ctxTL, tiles[hand].rPos, cursorX, cursorY, 50, rAnim);
+        displayPos(ctxTL, tiles[hand].rPos, cursorX, cursorY, tileSize + (posN * 2), rAnim);
         if (Math.abs(rAnim) < 0.1) {
             rAnim = 0;
         }
