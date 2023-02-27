@@ -36,7 +36,7 @@ let deckBehavior = 0; //0: no slots refresh until all empty. 1: empty slot refre
 let col = [,,,,,,,,,,]; //The hex values of the game's colors. The first is the color of a tile, the rest are for the sides
 col = ["#FFFFFF", "#3F3F3F", "#000000", "#FF0000", "#00BF00", "#0000FF", "#FFDF00", "#00FFFF", "#FF00FF", "#FF7F00", "#7F00FF"];
 let colScheme = 0;
-let colSchemeName = ["Default", "Graph Paper", "Geothermal"];
+let colSchemeName = ["Default", "Graph Paper", "RGB", "CMYK", "Geothermal"];
 
 let boardN = 8;
 let board = [
@@ -76,8 +76,7 @@ function Tile () { //Constructor for tiles. The parameters are what color each s
                 }
             }
         }
-    }
-    else {
+    } else {
         for (let f = 0; f < 4; f++) {
             while (this.pos.slice(f * posN, (f + 1) * posN).every(p => p == 0)) {
                 for (let g = 0; g < posN; g++) {
@@ -465,6 +464,12 @@ canvasTL.addEventListener('click', (event) => {
                     col = ["#FFF7DF", "#000000", "#000000", "#005FFF", "#FF0000", "#00BF00", "#7F7F7F", "#00009F", "#8F0000", "#007F00", "#FF00FF"];
                     break;
                 case 2:
+                    col = ["#FFFFFF", "#000000", "#FF0000", "#00FF00", "#0000FF", "#000000", "#00FFFF", "#FF00FF", "#FFFF00", "#7F7F7F", "#BFBFBF"];
+                    break;
+                case 3:
+                    col = ["#000000", "#FFFFFF", "#00FFFF", "#FF00FF", "#FFFF00", "#FFFFFF", "#FF0000", "#00FF00", "#0000FF", "#7F7F7F", "#3F3F3F"];
+                    break;
+                case 4:
                     col = ["#00007F", "#BFBFBF", "#FFFFFF", "#FFDF00", "#FF7F00", "#FF0000", "#BFBFBF", "#00FFFF", "#0000FF", "#FF00FF", "#00FF00"];
                     break;
                 default:
@@ -799,24 +804,33 @@ function drawTiles() { /////////////////////////////////////////////////////////
     }
 
     if (hand != -1) {
+        ctxML.lineWidth = 2;
+        ctxML.strokeStyle = col[1];
         for (let n = 0; n < 8; n++) {
             for (let m = 0; m < 8; m++) {
+                ctxML.translate((m * tileSize) + bOriginX, (n * tileSize) + bOriginY);
                 if (!checkCompat(m, n, hand)) { //Draws an X on any space where the currently held tile can't be put down
-                    ctxML.lineWidth = 2;
-                    ctxML.strokeStyle = col[1];
                     ctxML.beginPath();
-                    ctxML.moveTo(m * tileSize + bOriginX, n * tileSize + bOriginY);
-                    ctxML.lineTo((m + 1) * tileSize + bOriginX, (n + 1) * tileSize + bOriginY);
+                    ctxML.moveTo(0, 0);
+                    ctxML.lineTo(tileSize, tileSize);
                     ctxML.stroke();
                     ctxML.beginPath();
-                    ctxML.moveTo((m + 1) * tileSize + bOriginX, n * tileSize + bOriginY);
-                    ctxML.lineTo(m * tileSize + bOriginX, (n + 1) * tileSize + bOriginY);
+                    ctxML.moveTo(tileSize, 0);
+                    ctxML.lineTo(0, tileSize);
                     ctxML.stroke();
-                } else if (checkStackCompat(board[m][n], hand) && tiles[board[m][n]].stacked == -1 && tiles[hand].stacked == -1) {
-                    ctxML.lineWidth = 1;
-                    ctxML.strokeStyle = col[2];
-                    ctxML.strokeRect((m + 0.25) * tileSize + bOriginX, (n + 0.25) * tileSize + bOriginY, tileSize / 2, tileSize / 2);
                 }
+
+                ctxML.translate(tileSize / 2, tileSize / 2);
+                if (board[m][n] != -1 && tiles[board[m][n]].stacked == -1 && tiles[hand].stacked == -1) {
+                    if (checkStackCompat(board[m][n], hand)) {
+                        ctxML.strokeRect(-tileSize / 4, -tileSize / 4, tileSize / 2, tileSize / 2);
+                    }
+                    if (checkStackCompat(hand, board[m][n])) {
+                        ctxML.rotate(Math.PI / 4);
+                        ctxML.strokeRect(-tileSize / 4, -tileSize / 4, tileSize / 2, tileSize / 2);
+                    }
+                }
+                ctxML.resetTransform();
             }
         }
 
@@ -832,6 +846,7 @@ function drawTiles() { /////////////////////////////////////////////////////////
         }
         displayPos(ctxML, tiles[hand].pos, 560, 320, tileSize * 2, 0);
     }
+    ctxML.resetTransform();
 }
 
 function drawCursor() {
